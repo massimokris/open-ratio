@@ -2,8 +2,8 @@
   <rect x="32" y="32" width="960" height="960" rx="218" fill="#000000"/>
   <!-- Original arrow paths, uniformly scaled to match generate-icon.swift. -->
   <g transform="translate(-307.2 -373.2) scale(1.6)" fill="none" stroke-width="34" stroke-linecap="square" stroke-linejoin="miter">
-    <path d="M430 604V412m-63 64 63-64 63 64" stroke="#28CD41"/>
-    <path d="M594 420v192m-63-64 63 64 63-64" stroke="#FF3B30"/>
+    <path d="M430 604V429M367 476L430 412L493 476" stroke="#28CD41"/>
+    <path d="M594 420V595M531 548L594 612L657 548" stroke="#FF3B30"/>
   </g>
   <!-- Both arrows and the ratio line have a final thickness of 54.4. -->
   <rect x="174" y="764.8" width="459.68" height="54.4" fill="#28CD41"/>

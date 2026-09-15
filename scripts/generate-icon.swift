@@ -30,7 +30,8 @@ func render(pixels: Int, filename: String) throws {
     let createColor = color(40, 205, 65)
     let consumeColor = color(255, 59, 48)
     let compositionScale: CGFloat = 1.6
-    let strokeWidth: CGFloat = 34 * compositionScale
+    let baseStrokeWidth: CGFloat = 34
+    let strokeWidth = baseStrokeWidth * compositionScale
     var arrowTransform = AffineTransform.identity
     arrowTransform.translate(x: 512, y: 578)
     arrowTransform.scale(compositionScale)
@@ -46,7 +47,8 @@ func render(pixels: Int, filename: String) throws {
     }
     let upArrow = NSBezierPath()
     upArrow.move(to: NSPoint(x: 430, y: 420))
-    upArrow.line(to: NSPoint(x: 430, y: 612))
+    // Retract the stem's square cap so it stays inside the pointed head.
+    upArrow.line(to: NSPoint(x: 430, y: 612 - baseStrokeWidth / 2))
     upArrow.move(to: NSPoint(x: 367, y: 548))
     upArrow.line(to: NSPoint(x: 430, y: 612))
     upArrow.line(to: NSPoint(x: 493, y: 548))
@@ -54,7 +56,7 @@ func render(pixels: Int, filename: String) throws {
 
     let downArrow = NSBezierPath()
     downArrow.move(to: NSPoint(x: 594, y: 604))
-    downArrow.line(to: NSPoint(x: 594, y: 412))
+    downArrow.line(to: NSPoint(x: 594, y: 412 + baseStrokeWidth / 2))
     downArrow.move(to: NSPoint(x: 531, y: 476))
     downArrow.line(to: NSPoint(x: 594, y: 412))
     downArrow.line(to: NSPoint(x: 657, y: 476))
