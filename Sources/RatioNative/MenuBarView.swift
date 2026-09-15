@@ -117,7 +117,7 @@ struct MenuBarView: View {
                             .background(RatioTheme.consume, in: Capsule())
                     } else {
                         Text("✓")
-                            .font(RatioTheme.font())
+                            .font(.custom("Menlo-Regular", fixedSize: 12))
                             .foregroundStyle(showsCompletedClassification ? Color.black : RatioTheme.text)
                             .frame(width: 19, height: 19)
                     }
