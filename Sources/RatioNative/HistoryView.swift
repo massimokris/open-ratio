@@ -66,30 +66,52 @@ private struct HistoryDayRow: View {
     var showsDirection = false
 
     var body: some View {
-        HStack(spacing: 16) {
-            Text(showsDirection ? directionSymbol : HistoryFormatting.dateLabel(for: day.day))
-                .font(showsDirection ? Font(RatioTypography.glyphFont()) : RatioTheme.font())
-                .foregroundStyle(showsDirection ? ratioColor : RatioTheme.secondary)
-                .frame(width: 58, alignment: .leading)
-            GeometryReader { geometry in
+        Group {
+            if showsDirection {
                 HStack(spacing: 0) {
-                    if let createPercentage {
-                        RatioTheme.create.frame(width: geometry.size.width * createPercentage / 100)
-                        RatioTheme.consume.frame(width: geometry.size.width * (100 - createPercentage) / 100)
-                    }
+                    Text(directionSymbol)
+                        .font(Font(RatioTypography.glyphFont()))
+                        .foregroundStyle(ratioColor)
+                        .fixedSize()
+                    Spacer(minLength: 0)
+                    ratioBar.frame(width: 180)
+                    Spacer(minLength: 0)
+                    ratioLabel.fixedSize()
                 }
-                .frame(width: geometry.size.width, height: 2)
-                .background(RatioTheme.line)
-            }.frame(height: 2).accessibilityHidden(true)
-            Text(ratioText)
-                .foregroundStyle(ratioColor)
-                .frame(width: 58, alignment: .trailing)
+            } else {
+                HStack(spacing: 16) {
+                    Text(HistoryFormatting.dateLabel(for: day.day))
+                        .font(RatioTheme.font())
+                        .foregroundStyle(RatioTheme.secondary)
+                        .frame(width: 58, alignment: .leading)
+                    ratioBar
+                    ratioLabel.frame(width: 58, alignment: .trailing)
+                }
+            }
         }
         .font(RatioTheme.font(size: 12))
         .lineLimit(1)
         .padding(.horizontal, 16).frame(height: 44)
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) { Hairline() }
+    }
+
+    private var ratioBar: some View {
+        GeometryReader { geometry in
+            HStack(spacing: 0) {
+                if let createPercentage {
+                    RatioTheme.create.frame(width: geometry.size.width * createPercentage / 100)
+                    RatioTheme.consume.frame(width: geometry.size.width * (100 - createPercentage) / 100)
+                }
+            }
+            .frame(width: geometry.size.width, height: 2)
+            .background(RatioTheme.line)
+        }.frame(height: 2).accessibilityHidden(true)
+    }
+
+    private var ratioLabel: some View {
+        Text(ratioText)
+            .foregroundStyle(ratioColor)
     }
 
     private var createPercentage: Double? {
