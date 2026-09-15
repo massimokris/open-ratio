@@ -64,6 +64,14 @@ public struct ActivityLedger: Codable, Equatable {
         days[day, default: [:]][source.id, default: 0] += seconds
     }
 
+    /// Clears one recorded day while retaining remembered categories and earlier days.
+    @discardableResult
+    public mutating func removeActivity(on day: String) -> DaySummary {
+        let removed = summary(on: day)
+        days.removeValue(forKey: day)
+        return removed
+    }
+
     public mutating func classify(_ source: ActivitySource, as category: ActivityCategory?) {
         sources[source.id] = source
         categories[source.id] = category

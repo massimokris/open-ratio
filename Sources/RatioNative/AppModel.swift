@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import RatioCore
 
@@ -14,20 +15,62 @@ final class AppModel: ObservableObject {
     @Published var filter: ActivityFilter = .all
     @Published var tourPresented = false
     @Published var now = Date()
+    @Published private(set) var storageNotice: String?
+    @Published private(set) var isReferenceDemo = false
+    let dataDirectory: URL
     @Published var appearance: Appearance {
         didSet { UserDefaults.standard.set(appearance.rawValue, forKey: "appearance") }
     }
     private var timer: Timer?
+    private let activityStore: ActivityStore
+    private let foregroundMonitor = ForegroundActivityMonitor()
+    private var terminationObserver: NSObjectProtocol?
+    private var lastSavedLedger = ActivityLedger()
+    private var lastSaveUptime: TimeInterval = 0
+    private var persistenceBlocked = false
+    private var recoveryNotice: String?
 
     init() {
+        let override = ProcessInfo.processInfo.environment["RATIO_NATIVE_DATA_DIR"]
+        dataDirectory = override.map { URL(fileURLWithPath: $0, isDirectory: true) }
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("RatioNative", isDirectory: true)
+        activityStore = ActivityStore(directory: dataDirectory)
         appearance = Appearance(rawValue: UserDefaults.standard.string(forKey: "appearance") ?? "System") ?? .system
-        if ProcessInfo.processInfo.arguments.contains("--demo") { startDemo() }
-        let heartbeat = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.tick() }
+        do {
+            let loaded = try activityStore.load()
+            session = RatioSession(liveLedger: loaded.ledger)
+            lastSavedLedger = loaded.ledger
+            recoveryNotice = loaded.notice
+            storageNotice = loaded.notice
+        } catch {
+            persistenceBlocked = true
+            storageNotice = "Activity could not be loaded: \(error.localizedDescription) Your original files are retained. Resolve the problem in the data folder and reopen Ratio Native; new activity is only held in memory."
         }
-        // Explicit main/common scheduling also advances while native menus track input.
+        if ProcessInfo.processInfo.arguments.contains("--reference-demo") { startReferenceDemo() }
+        else if ProcessInfo.processInfo.arguments.contains("--demo") { startDemo() }
+        foregroundMonitor.onObservation = { [weak self] in self?.receive($0) }
+        foregroundMonitor.onSystemActiveChange = { [weak self] active in
+            guard let self else { return }
+            self.session.setSystemActive(active)
+            if !active { self.saveActivity() }
+        }
+        foregroundMonitor.start()
+        let heartbeat = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.tick() }
+        }
         RunLoop.main.add(heartbeat, forMode: .common)
         timer = heartbeat
+        terminationObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.refreshTracking()
+                self?.saveActivity()
+                self?.foregroundMonitor.stop()
+                self?.timer?.invalidate()
+            }
+        }
     }
     var today: String { ActivityFormatting.dayIdentifier(for: now) }
     var summary: DaySummary { session.ledger.summary(on: today) }
@@ -36,6 +79,10 @@ final class AppModel: ObservableObject {
     var unclassifiedCount: Int { summary.activities.filter { $0.category == nil }.count }
     var activityRows: [ActivityTotal] {
         summary.activities.filter { filter == .all || $0.category == nil }.sorted {
+            if isReferenceDemo {
+                return (ReferenceDemo.sourceOrder.firstIndex(of: $0.id) ?? Int.max)
+                    < (ReferenceDemo.sourceOrder.firstIndex(of: $1.id) ?? Int.max)
+            }
             if ($0.id == activeSource?.id) != ($1.id == activeSource?.id) { return $0.id == activeSource?.id }
             return $0.seconds == $1.seconds ? $0.source.name < $1.source.name : $0.seconds > $1.seconds
         }
@@ -45,20 +92,86 @@ final class AppModel: ObservableObject {
         let create = Int(percentage.rounded())
         return "\(create) : \(100 - create)"
     }
+    var indicatorPaused: Bool { session.isPaused || (!session.isDemo && (session.isLiveIdle || !session.isSystemActive)) }
+    var activeStatusText: String {
+        if session.isPaused { return "Paused" }
+        if session.isDemo { return "Demo activity" }
+        if !session.isSystemActive { return "Session inactive" }
+        if session.isLiveIdle { return "Idle · five-minute grace ended" }
+        return "In focus now"
+    }
     var statusText: String {
         if session.isPaused { return "Tracking paused" }
         if session.isDemo { return "Demo is running" }
+        if !session.isSystemActive { return "Session inactive" }
+        if session.isLiveIdle { return "Idle · tracking suspended" }
         return activeSource == nil ? "Waiting for activity" : "Tracking activity"
     }
-    func tick() {
-        now = Date()
-        session.advanceDemo(seconds: 1, day: today)
+    var canUndoReset: Bool { session.canUndoReset }
+
+    /// Optional browser adapters return a cached hostname source or the supplied application fallback.
+    var sourceResolver: ((NSRunningApplication, ActivitySource) -> ActivitySource)? {
+        get { foregroundMonitor.sourceResolver }
+        set { foregroundMonitor.sourceResolver = newValue; refreshTracking() }
     }
-    func classify(_ source: ActivitySource, as category: ActivityCategory?) { session.classify(source, as: category) }
-    func togglePause() { session.setPaused(!session.isPaused) }
-    func startDemo() { session.enterDemo(day: today); page = .today; filter = .all }
+    func refreshTracking() { receive(foregroundMonitor.sample()) }
+    private func receive(_ observation: ActivityObservation) {
+        now = observation.date
+        session.observe(observation)
+        if observation.uptime - lastSaveUptime >= 5 { saveActivity() }
+    }
+    func tick() {
+        refreshTracking()
+        if !isReferenceDemo { session.advanceDemo(seconds: 1, day: today) }
+    }
+    func saveActivity() {
+        guard !persistenceBlocked, session.liveLedger != lastSavedLedger else { return }
+        do {
+            try activityStore.save(session.liveLedger)
+            lastSavedLedger = session.liveLedger
+            lastSaveUptime = ProcessInfo.processInfo.systemUptime
+            storageNotice = recoveryNotice
+        } catch {
+            storageNotice = "Activity could not be saved: \(error.localizedDescription) New activity remains in memory; Ratio Native will retry."
+            lastSaveUptime = ProcessInfo.processInfo.systemUptime
+        }
+    }
+    func classify(_ source: ActivitySource, as category: ActivityCategory?) {
+        refreshTracking()
+        session.classify(source, as: category)
+        saveActivity()
+    }
+    func togglePause() {
+        refreshTracking()
+        session.setPaused(!session.isPaused)
+        refreshTracking()
+        saveActivity()
+    }
+    func startDemo() {
+        refreshTracking()
+        saveActivity()
+        session.enterDemo(day: today)
+        page = .today
+        filter = .all
+    }
+    private func startReferenceDemo() {
+        refreshTracking()
+        saveActivity()
+        session.enterDemo(ledger: ReferenceDemo.ledger(day: today), activeSource: ReferenceDemo.activeSource)
+        isReferenceDemo = true
+        page = .today
+        filter = .all
+    }
     func resetDemo() { session.resetDemo(day: today); filter = .all }
-    func exitDemo() { session.exitDemo(); filter = .all }
+    func exitDemo() { session.exitDemo(); isReferenceDemo = false; refreshTracking(); filter = .all }
+    func resetToday() {
+        refreshTracking()
+        session.resetDay(today)
+        refreshTracking()
+        saveActivity()
+        filter = .all
+    }
+    func undoResetToday() { refreshTracking(); session.undoReset(); saveActivity() }
     func selectDemoSource(_ source: ActivitySource) { session.selectDemoSource(source) }
     func showTour() { startDemo(); tourPresented = true }
 }
