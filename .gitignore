@@ -6,3 +6,13 @@ dist/
 *.xcuserstate
 *.xcuserdata/
 .scratch/
+/docs/qa/
+/docs/build.md
+/docs/code-review.md
+/docs/design-review.md
+/docs/distribution-notes.md
+/docs/product-observations.md
+/docs/qa-plan.md
+/docs/reference-panel.png
+/docs/verification.md
+/docs/agents/issue-tracker.md

@@ -1,6 +1,6 @@
 # Ratio Native
 
-A local macOS menu bar app for noticing the balance between **Create** and **Consume**. Its compact 360-point native panel follows the supplied [reference panel](docs/reference-panel.png). SwiftUI and AppKit render the interface; a separate Swift domain accounts for time. There is no webview, network service, account, analytics or third-party dependency.
+A local macOS menu bar app for noticing the balance between **Create** and **Consume**. Its compact 360-point native panel follows the supplied reference panel. SwiftUI and AppKit render the interface; a separate Swift domain accounts for time. There is no webview, network service, account, analytics or third-party dependency.
 
 ## Install
 
@@ -49,7 +49,7 @@ The switch starts **off** for new installations. Upgrades inherit only the curre
 
 Only HTTP(S) **hostnames** are retained: for example, `https://www.example.com/private?q=secret` becomes `example.com`. Paths, searches, fragments, credentials and page titles are not stored. Each website has its own initially unclassified category; it does not inherit the browser's category. Background tracking never launches a browser; opening happens only after an explicit enable, connect or retry action.
 
-Denied access, missing tabs, unsupported URLs and timeouts fall back to app tracking. Read the status help or Settings for the reason. To retry, allow the default browser in **System Settings → Privacy & Security → Automation**, then right-click the Track websites row and select **Retry access**, or turn Track websites off/on. App tracking requires no Accessibility permission, and website tracking requires no browser JavaScript setting. See [website verification](docs/qa/website-tracking.md) for the supported contract and test scope. Actual browser consent grants are not claimed by the automated tests.
+Denied access, missing tabs, unsupported URLs and timeouts fall back to app tracking. Read the status help or Settings for the reason. To retry, allow the default browser in **System Settings → Privacy & Security → Automation**, then right-click the Track websites row and select **Retry access**, or turn Track websites off/on. App tracking requires no Accessibility permission, and website tracking requires no browser JavaScript setting. Actual browser consent grants are not claimed by the automated tests.
 
 ## Local data, recovery and export
 
@@ -110,20 +110,18 @@ For an isolated development dataset, launch the executable with `RATIO_NATIVE_DA
 
 ## Optional public signing and notarization
 
-The delivered artifact has **not** been submitted to Apple. Apple Development identities are not a substitute for a **Developer ID Application** identity. The default scripts never submit anything for notarization. The explicit owner-operated workflow, including uploads and verification of an **Accepted** result, is in [Build and public release](docs/build.md).
+The delivered artifact has **not** been submitted to Apple. Apple Development identities are not a substitute for a **Developer ID Application** identity. The default scripts never submit anything for notarization. The optional owner-operated signing workflow is retained locally in the untracked `docs/build.md` notes.
 
 ## Project and evidence
 
-All 51 accounting, persistence, history, demo and native/browser tests pass. The final DMG was mounted, its app copied out and launched on the available Mac; the compact live panel, advancing activity and pause behavior were checked. Runtime and browser-permission limits are recorded in the linked evidence.
+All 51 accounting, persistence, history, demo and native/browser tests pass. The final DMG was mounted, its app copied out and launched on the available Mac; the compact live panel, advancing activity and pause behavior were checked. Detailed build, review, QA and reference records are kept locally and excluded from Git.
 
 - [Accounting vocabulary](CONTEXT.md) and [architecture decisions](docs/adr/)
 - Local specification and implementation tickets live in `.scratch/ratio-native/` and are intentionally excluded from Git.
-- [Internal design review](docs/design-review.md), [independent code review](docs/code-review.md) and [verification evidence](docs/verification.md)
-- [Compact-panel comparison](docs/qa/compact-panel.md), [website behavior checks](docs/qa/website-tracking.md) and [distribution notes](docs/distribution-notes.md)
 - `Sources/RatioCore`: deterministic accounting, history, CSV, persistence and hostname policy
 - `Sources/RatioNative`: AppKit/SwiftUI panel, foreground adapters, optional browser Automation and preferences
 - `Tests/RatioCoreTests`: concrete accounting timelines and public persistence/browser behavior
 
 ### Reference attribution
 
-This is an independent implementation inspired by [Ratio by Visualize Value](https://ratio.visualizevalue.com/) and the publicly observable interactions documented in [reference observations](docs/product-observations.md). It is not the original source, an official distribution or an endorsed product. The supplied screenshot is retained as a design reference; the executable's app icon was created in this repository. No proprietary executable or source was downloaded or reverse engineered.
+This is an independent implementation inspired by [Ratio by Visualize Value](https://ratio.visualizevalue.com/) and its publicly observable interactions. It is not the original source, an official distribution or an endorsed product. The supplied screenshot is retained as a design reference; the executable's app icon was created in this repository. No proprietary executable or source was downloaded or reverse engineered.

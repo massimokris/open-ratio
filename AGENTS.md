@@ -23,7 +23,7 @@ Read `CONTEXT.md` and relevant `docs/adr/` before changing behavior. Single cont
 - Keep website capture optional and host only, with one toggle for the system default browser. Other browsers and permission failures must use app-level tracking.
 - Commit only owned changes to the current branch. The coordinator runs the final two-axis code review against the planning baseline after implementation tickets land.
 - Claim a ticket by changing Status to in-progress; mark completed only with acceptance evidence. The parent spec stays unchanged.
-- Keep `.scratch/` planning files local and untracked; never force-add them to Git.
+- Keep `.scratch/` planning files and ignored documentation local and untracked; never force-add them to Git.
 
 ## Coding standards
 
