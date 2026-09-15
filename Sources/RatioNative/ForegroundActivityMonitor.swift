@@ -5,6 +5,12 @@ import RatioCore
 /// Converts native foreground, idle and session events into deterministic accounting inputs.
 @MainActor
 final class ForegroundActivityMonitor {
+    private static let excludedBundleIdentifiers: Set<String> = [
+        "com.apple.systempreferences",
+        "com.apple.finder",
+        "com.apple.loginwindow",
+        "com.rationative.RatioNative"
+    ]
     var sourceResolver: ((NSRunningApplication, ActivitySource) -> ActivitySource)?
     var onForegroundApplicationChange: ((NSRunningApplication?) -> Void)?
     var onObservation: ((ActivityObservation) -> Void)?
@@ -12,6 +18,11 @@ final class ForegroundActivityMonitor {
     private var observers: [NSObjectProtocol] = []
     private var isAwake = true
     private var isSessionActive = true
+    private let currentBundleIdentifier: String?
+
+    init(currentBundleIdentifier: String? = Bundle.main.bundleIdentifier) {
+        self.currentBundleIdentifier = currentBundleIdentifier
+    }
 
     func start() {
         let center = NSWorkspace.shared.notificationCenter
@@ -31,11 +42,27 @@ final class ForegroundActivityMonitor {
     }
 
     func sample() -> ActivityObservation {
+        // CoreGraphics' documented all-event sentinel is UInt32.max; no input-event tap is installed.
+        let idle = CGEventType(rawValue: UInt32.max).map {
+            CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: $0)
+        } ?? .infinity
+        return sample(foreground: NSWorkspace.shared.frontmostApplication,
+                      date: Date(), uptime: ProcessInfo.processInfo.systemUptime, idleSeconds: idle)
+    }
+
+    func sample(foreground: NSRunningApplication?, date: Date,
+                uptime: TimeInterval, idleSeconds: TimeInterval) -> ActivityObservation {
         let source: ActivitySource?
-        let foreground = NSWorkspace.shared.frontmostApplication
-        onForegroundApplicationChange?(foreground)
-        if let application = foreground,
-           application.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+        let trackableForeground = foreground.flatMap { application -> NSRunningApplication? in
+            guard application.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return nil }
+            if let bundleIdentifier = application.bundleIdentifier,
+               Self.excludedBundleIdentifiers.contains(bundleIdentifier) || bundleIdentifier == currentBundleIdentifier {
+                return nil
+            }
+            return application
+        }
+        onForegroundApplicationChange?(trackableForeground)
+        if let application = trackableForeground {
             let identity = application.bundleIdentifier ?? application.bundleURL?.path
             if let identity {
                 let appSource = ActivitySource(id: "app." + identity,
@@ -43,12 +70,8 @@ final class ForegroundActivityMonitor {
                 source = sourceResolver?(application, appSource) ?? appSource
             } else { source = nil }
         } else { source = nil }
-        // CoreGraphics' documented all-event sentinel is UInt32.max; no input-event tap is installed.
-        let idle = CGEventType(rawValue: UInt32.max).map {
-            CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: $0)
-        } ?? .infinity
-        return ActivityObservation(date: Date(), uptime: ProcessInfo.processInfo.systemUptime,
-                                   idleSeconds: idle, source: source)
+        return ActivityObservation(date: date, uptime: uptime,
+                                   idleSeconds: idleSeconds, source: source)
     }
 
     func stop() {

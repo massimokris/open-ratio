@@ -35,6 +35,8 @@ The compact panel and menu-bar ratio use SF Mono at 12 points with 0.4 points of
 
 Foreground activity counts automatically while the app runs. The first five minutes without input count as an idle grace for reading. Sleep, an inactive session and unexplained gaps over ten seconds are excluded; the app never fills time while it was closed. Days use the local date when time was recorded and keep that date after timezone changes.
 
+System Settings, Finder, loginwindow and Ratio Native are excluded from new tracking. Time spent in those apps is not attributed to the previous app; tracking resumes when another app becomes active. Existing history and categories are retained.
+
 ### Demo and guidance
 
 **Try Demo** uses fictional activity stored separately in memory. **How It Works…** opens a five-step interactive guide with a compact demo panel. Demo mode is labeled **DEMO** in the panel and **D** in the menu bar. You can change demo sources and categories, pause, inspect fictional history and reset it. Real tracking is suspended during demo, and real activity and pause state are preserved. **Exit Demo**, **Close Tour** or **Finish** returns to real activity; resetting the demo never erases real history.

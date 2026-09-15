@@ -18,6 +18,8 @@ _Avoid_: score
 
 **Tracked time**: Foreground time counted while tracking is active, including the idle grace period and unclassified activity.
 
+**Excluded application**: An application that accrues no new tracked time while it is foreground. Existing history remains available, and time in an excluded application does not count toward the previous activity source.
+
 **Day**: The local calendar date to which tracked time was assigned when it occurred.
 
 **Idle grace**: The first five minutes without input, which still count as tracked time to accommodate reading.

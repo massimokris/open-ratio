@@ -11,7 +11,8 @@ let package = Package(
     targets: [
         .target(name: "RatioCore"),
         .executableTarget(name: "RatioNative", dependencies: ["RatioCore"]),
-        .testTarget(name: "RatioCoreTests", dependencies: ["RatioCore"])
+        .testTarget(name: "RatioCoreTests", dependencies: ["RatioCore"]),
+        .testTarget(name: "RatioNativeTests", dependencies: ["RatioNative", "RatioCore"])
     ],
     swiftLanguageVersions: [.v5]
 )
