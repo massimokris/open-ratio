@@ -44,7 +44,7 @@ private struct LaunchAtLoginPreferencesView: View {
     @ObservedObject var controller: LaunchAtLoginController
 
     var body: some View {
-        PreferenceRow(title: "Open at start") {
+        PreferenceRow(title: "Open at login") {
             Button {
                 controller.setEnabled(!controller.isEnabled)
             } label: {
@@ -53,7 +53,7 @@ private struct LaunchAtLoginPreferencesView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(PanelButtonStyle())
-            .accessibilityLabel("Open at start")
+            .accessibilityLabel("Open at login")
             .accessibilityValue(controller.isEnabled ? "On" : "Off")
         }
         .help(helpText)

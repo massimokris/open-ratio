@@ -68,7 +68,7 @@ final class LaunchAtLoginController: ObservableObject {
         } catch {
             refresh()
             let action = enabled ? "enabled" : "disabled"
-            notice = "Open at start could not be \(action): \(error.localizedDescription)"
+            notice = "Open at login could not be \(action): \(error.localizedDescription)"
         }
     }
 
@@ -83,7 +83,7 @@ final class LaunchAtLoginController: ObservableObject {
         case .requiresApproval:
             notice = "Approval required in System Settings before Open Ratio can open at login."
         case .unavailable:
-            notice = "Open at start is unavailable on this Mac."
+            notice = "Open at login is unavailable on this Mac."
         case .notRegistered, .enabled:
             notice = nil
         }

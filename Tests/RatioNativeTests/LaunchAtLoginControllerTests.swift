@@ -82,7 +82,7 @@ final class LaunchAtLoginControllerTests: XCTestCase {
         XCTAssertFalse(controller.isEnabled)
         XCTAssertFalse(controller.requiresApproval)
         XCTAssertEqual(controller.notice,
-                       "Open at start could not be enabled: The login item operation failed.")
+                       "Open at login could not be enabled: The login item operation failed.")
         XCTAssertEqual(service.operations, ["register"])
     }
 
@@ -97,7 +97,7 @@ final class LaunchAtLoginControllerTests: XCTestCase {
         XCTAssertTrue(controller.isEnabled)
         XCTAssertFalse(controller.requiresApproval)
         XCTAssertEqual(controller.notice,
-                       "Open at start could not be disabled: The login item operation failed.")
+                       "Open at login could not be disabled: The login item operation failed.")
         XCTAssertEqual(service.operations, ["unregister"])
     }
 
