@@ -7,7 +7,7 @@ A local macOS menu bar app for noticing the balance between **Create** and **Con
 1. Open `dist/Ratio-Native-1.0.0-universal.dmg`.
 2. Drag **Ratio Native.app** to the **Applications** shortcut.
 3. Eject the image and open **Ratio Native** from Applications. The panel opens at launch.
-4. Click the ratio in the menu bar to reopen or close the panel. **Right-click the menu bar ratio** for **Settings…**, **How It Works…**, **Try Demo**, **Undo Reset** and **Quit Ratio Native**. The app does not show a Dock icon.
+4. Click the ratio in the menu bar to reopen or close the panel. **Right-click the menu bar ratio** for **Settings…**, **Try Demo**, **Undo Reset** and **Quit Ratio Native**. The app does not show a Dock icon.
 
 The app targets **macOS 13 or later** and contains both **arm64** and **x86_64** release code. Native runtime verification is limited to the available Apple Silicon Mac running macOS **26.5.2**; Intel hardware and macOS 13 have not been runtime-tested.
 
@@ -37,9 +37,9 @@ Foreground activity counts automatically while the app runs. The first five minu
 
 System Settings, Finder, loginwindow and Ratio Native are excluded from new tracking. Time spent in those apps is not attributed to the previous app; tracking resumes when another app becomes active. Existing history and categories are retained.
 
-### Demo and guidance
+### Demo
 
-**Try** in the settings Demo row uses fictional activity stored separately in memory. The row becomes **Exit** while the demo is active. **How It Works…** opens a five-step interactive guide with a compact demo panel. Demo mode is labeled **DEMO** in the panel and **D** in the menu bar. You can change demo sources and categories, pause, inspect fictional history and reset it. Real tracking is suspended during demo, and real activity and pause state are preserved. **Exit Demo**, **Close Tour** or **Finish** returns to real activity; resetting the demo never erases real history.
+**Try** in the settings Demo row uses fictional activity stored separately in memory. The row becomes **Exit** while the demo is active. Demo mode is labeled **DEMO** in the panel and **D** in the menu bar. You can change demo sources and categories, pause, inspect fictional history and reset it. Real tracking is suspended during demo, and real activity and pause state are preserved. **Exit Demo** returns to real activity; resetting the demo never erases real history.
 
 ### Optional websites and permissions
 
@@ -63,7 +63,7 @@ Denied access, missing tabs, unsupported URLs and timeouts fall back to app trac
 
 The panel context menu has **Show Data Folder**. JSON writes are atomic and retain a previous valid snapshot. Storage errors appear in the panel status help; unreadable originals are preserved. If the app cannot load safely, new activity stays in memory until you fix the reported problem and reopen it. If saving fails, it retains new activity in memory and retries. Copy the entire data folder while the app is quit before manually repairing files; keep any corrupt originals. An unsupported newer schema is left unchanged and requires a compatible app version.
 
-**Export CSV…** remains available in the panel/history context menu; the settings page has no export or guide buttons. It exports retained days, source names, current categories and seconds. In demo mode it exports only the labeled fictional dataset; leave demo to export real activity. The export is local and does not change activity.
+**Export CSV…** remains available in the panel/history context menu; the settings page has no export button. It exports retained days, source names, current categories and seconds. In demo mode it exports only the labeled fictional dataset; leave demo to export real activity. The export is local and does not change activity.
 
 ## Build and test
 
@@ -100,7 +100,7 @@ For an isolated development dataset, launch the executable with `RATIO_NATIVE_DA
 
 ## Troubleshooting
 
-- **Cannot see the app:** find the ratio in the menu bar and click it. Open the app again from Applications to reveal its panel or existing guide window. Right-click the ratio to quit.
+- **Cannot see the app:** find the ratio in the menu bar and click it. Open the app again from Applications to reveal its panel. Right-click the ratio to quit.
 - **No ratio yet:** unknown apps begin unclassified. Select ↑ or ↓; no time or category is invented for a new real dataset.
 - **Time stopped advancing:** check Pause, demo mode, input inactivity and session sleep. No activity is reconstructed for time when the app was not running.
 - **Website shown as its browser:** only the default browser tracks individual websites. Check Track websites and the reason in Settings, then use Connect browser / Retry access if needed. App tracking continues without website access.

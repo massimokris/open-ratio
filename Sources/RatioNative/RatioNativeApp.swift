@@ -39,21 +39,19 @@ private struct RatioCommands: Commands {
             Button("Reset Today") {
                 if model.session.isDemo { model.resetDemo() } else { model.resetToday() }
             }.keyboardShortcut("r", modifiers: [.command, .shift])
-            Button("How It Works…", action: model.showTour).keyboardShortcut("?", modifiers: [.command])
         }
     }
 }
 
 /// AppKit owns the menu-bar anchor and transient panel; SwiftUI renders its exact grid.
 @MainActor
-final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class RatioAppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
     private var statusItem: NSStatusItem?
     private var panel: RatioPanel?
     private var outsideClickMonitor: Any?
     private var localClickMonitor: Any?
     private var subscriptions = Set<AnyCancellable>()
-    private var tourWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
@@ -86,20 +84,13 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
         model.$appearance.sink { [weak self] appearance in
             guard let self else { return }
             self.panel?.appearance = Self.nativeAppearance(appearance)
-            self.tourWindow?.appearance = Self.nativeAppearance(appearance)
-        }.store(in: &subscriptions)
-        model.$tourPresented.removeDuplicates().sink { [weak self] presented in
-            if presented { self?.showTourWindow() }
-            else { self?.tourWindow?.close() }
         }.store(in: &subscriptions)
         updateStatusItem()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in self?.showPanel() }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if let tourWindow, tourWindow.isVisible {
-            tourWindow.makeKeyAndOrderFront(nil)
-        } else if panel?.isVisible != true && !flag {
+        if panel?.isVisible != true && !flag {
             showPanel()
         }
         return false
@@ -172,33 +163,6 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
         model.page = .preferences
         showPanel()
     }
-    private func showTourWindow() {
-        closePanel()
-        if tourWindow == nil {
-            tourWindow = auxiliaryWindow(title: "How Ratio Works", size: NSSize(width: 760, height: 600),
-                                         content: TourView(showPreferences: { [weak self] in self?.showPreferences() }).environmentObject(model))
-            tourWindow?.delegate = self
-        } else {
-            tourWindow?.contentViewController = NSHostingController(rootView: TourView(showPreferences: { [weak self] in self?.showPreferences() }).environmentObject(model))
-        }
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        tourWindow?.makeKeyAndOrderFront(nil)
-    }
-    func windowWillClose(_ notification: Notification) {
-        if let window = notification.object as? NSWindow, window === tourWindow {
-            model.closeGuidedTour()
-        }
-    }
-    private func auxiliaryWindow<Content: View>(title: String, size: NSSize, content: Content) -> NSWindow {
-        let window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
-                              styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
-        window.title = title
-        window.isReleasedWhenClosed = false
-        window.contentViewController = NSHostingController(rootView: content)
-        window.appearance = Self.nativeAppearance(model.appearance)
-        window.center()
-        return window
-    }
     private func updateStatusItem() {
         guard let button = statusItem?.button else { return }
         let category = model.activeCategory
@@ -238,7 +202,6 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
         let menu = NSMenu()
         add("Show Ratio", to: menu, action: #selector(openPanel))
         add("Settings…", to: menu, action: #selector(openPreferences), key: ",")
-        add("How It Works…", to: menu, action: #selector(openTour))
         menu.addItem(.separator())
         add(model.session.isPaused ? "Resume Tracking" : "Pause Tracking", to: menu, action: #selector(togglePause))
         add(model.session.isDemo ? "Exit Demo" : "Try Demo", to: menu, action: #selector(toggleDemo))
@@ -258,7 +221,6 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
     }
     @objc private func openPanel() { showPanel() }
     @objc private func openPreferences() { showPreferences() }
-    @objc private func openTour() { model.showTour() }
     @objc private func togglePause() { model.togglePause() }
     @objc private func toggleDemo() {
         if model.session.isDemo { model.exitDemo() } else { model.startDemo() }

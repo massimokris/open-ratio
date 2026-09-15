@@ -13,7 +13,6 @@ final class AppModel: ObservableObject {
     @Published var session = RatioSession()
     @Published var page: Page = .today
     @Published var filter: ActivityFilter = .all
-    @Published var tourPresented = false
     @Published var now = Date()
     @Published private(set) var storageNotice: String?
     @Published private(set) var isReferenceDemo = false
@@ -180,7 +179,6 @@ final class AppModel: ObservableObject {
         isReferenceDemo = false
         refreshTracking()
         filter = .all
-        tourPresented = false
     }
     func resetToday() {
         if session.isDemo { resetDemo(); return }
@@ -192,5 +190,4 @@ final class AppModel: ObservableObject {
     }
     func undoResetToday() { refreshTracking(); session.undoReset(); saveActivity() }
     func selectDemoSource(_ source: ActivitySource) { session.selectDemoSource(source) }
-    func showTour() { startDemo(); tourPresented = true }
 }

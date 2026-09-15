@@ -16,15 +16,12 @@ struct TodayView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(16)
                     } else {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("NO ACTIVITY YET")
-                                .frame(minHeight: RatioTypography.lineHeight())
-                            Text("Your activity will appear here.")
-                                .frame(minHeight: RatioTypography.lineHeight())
-                        }
-                        .foregroundStyle(RatioTheme.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
+                        Text("No activity yet.")
+                            .font(RatioTheme.font(size: 12))
+                            .foregroundStyle(RatioTheme.text)
+                            .frame(minHeight: RatioTypography.lineHeight())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
                     }
                 } else {
                     ForEach(model.activityRows) { activity in

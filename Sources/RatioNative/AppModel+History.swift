@@ -42,16 +42,4 @@ extension AppModel {
             alert.runModal()
         }
     }
-
-    func beginGuidedTour() {
-        // startDemo replaces the screenshot fixture; reset also clears prior normal-demo choices.
-        startDemo()
-        resetDemo()
-    }
-
-    func closeGuidedTour() {
-        if session.isDemo { exitDemo() }
-        page = .today
-        tourPresented = false
-    }
 }

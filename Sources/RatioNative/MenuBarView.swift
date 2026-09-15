@@ -39,7 +39,6 @@ struct MenuBarView: View {
         .onChange(of: model.session.isDemo) { _ in selectedHistoryDay = nil }
         .contextMenu {
             Button("Settings…", action: showPreferences)
-            Button("How It Works…", action: model.showTour)
             Divider()
             Button(model.session.isDemo ? "Exit Demo" : "Try Demo") {
                 if model.session.isDemo { model.exitDemo() } else { model.startDemo() }
@@ -170,7 +169,6 @@ struct MenuBarView: View {
         if model.session.isPaused { return model.session.isDemo ? "DEMO · PAUSED" : "PAUSED" }
         if model.session.isDemo { return "DEMO" }
         if model.indicatorPaused { return "AWAY" }
-        if model.browserFallbackNotice != nil { return "APP TRACKING" }
         return "TRACKING"
     }
     private var footer: some View {

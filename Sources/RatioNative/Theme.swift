@@ -76,14 +76,3 @@ struct Eyebrow: View {
 struct Hairline: View {
     var body: some View { Rectangle().fill(RatioTheme.line).frame(height: 0.5) }
 }
-
-struct QuietButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label.font(RatioTheme.font())
-            .padding(.horizontal, 11).padding(.vertical, 8)
-            .background(RatioTheme.line.opacity(configuration.isPressed ? 0.9 : 0.4),
-                        in: RoundedRectangle(cornerRadius: 5))
-            .contentShape(Rectangle())
-            .pointingHandCursor()
-    }
-}
