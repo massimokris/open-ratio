@@ -20,6 +20,7 @@ struct PreferencesView: View {
                 .help(model.appearance == .dark ? "Switch to light appearance" : "Switch to dark appearance")
             }
             BrowserPreferencesView()
+            LaunchAtLoginPreferencesView(controller: model.launchAtLogin)
             PreferenceRow(title: "Demo") {
                 Button {
                     if model.session.isDemo { model.exitDemo() } else { model.startDemo() }
@@ -36,6 +37,43 @@ struct PreferencesView: View {
             Spacer(minLength: 0)
         }
         .frame(width: 360, height: 264)
+    }
+}
+
+private struct LaunchAtLoginPreferencesView: View {
+    @ObservedObject var controller: LaunchAtLoginController
+
+    var body: some View {
+        PreferenceRow(title: "Open at start") {
+            Button {
+                controller.setEnabled(!controller.isEnabled)
+            } label: {
+                Text(controller.isEnabled ? "On" : "Off")
+                    .frame(width: 88, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PanelButtonStyle())
+            .accessibilityLabel("Open at start")
+            .accessibilityValue(controller.isEnabled ? "On" : "Off")
+        }
+        .help(helpText)
+        .contextMenu {
+            if let notice = controller.notice { Text(notice) }
+            if controller.requiresApproval {
+                Divider()
+                Button("Open Login Items Settings", action: controller.openLoginItemsSettings)
+            }
+        }
+        .onAppear { controller.refresh() }
+    }
+
+    private var helpText: String {
+        if let notice = controller.notice {
+            return controller.requiresApproval ? "\(notice) Right-click to open Login Items settings." : notice
+        }
+        return controller.isEnabled
+            ? "Open Ratio will open when you log in."
+            : "Open Ratio will not open automatically when you log in."
     }
 }
 

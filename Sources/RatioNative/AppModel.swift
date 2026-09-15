@@ -17,6 +17,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var storageNotice: String?
     @Published private(set) var isReferenceDemo = false
     let browserTracking = BrowserTrackingCoordinator()
+    let launchAtLogin = LaunchAtLoginController(service: NativeLaunchAtLoginService())
     let dataDirectory: URL
     @Published var appearance: Appearance {
         didSet { UserDefaults.standard.set(appearance.rawValue, forKey: "appearance") }
