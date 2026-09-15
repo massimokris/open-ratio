@@ -58,6 +58,8 @@ else
     ratio_mounted=true
     [[ -L "$ratio_verify_stage/mount/Applications" ]]
     [[ "$(readlink "$ratio_verify_stage/mount/Applications")" == /Applications ]]
+    [[ -s "$ratio_verify_stage/mount/.DS_Store" ]]
+    [[ -s "$ratio_verify_stage/mount/.background/installer.tiff" ]]
     # A successful write would violate the requested read-only verification mount.
     if touch "$ratio_verify_stage/mount/.ratio-write-check" 2> "$ratio_verify_stage/write-check.log"; then
         rm "$ratio_verify_stage/mount/.ratio-write-check"
@@ -67,5 +69,5 @@ else
     ratio_verify_app "$ratio_verify_stage/mount/Open Ratio.app"
     /usr/bin/hdiutil detach "$ratio_verify_stage/mount"
     ratio_mounted=false
-    echo "Verified DMG integrity, read-only mount, Applications shortcut and bundled app."
+    echo "Verified DMG integrity, read-only mount, Finder layout, Applications shortcut and bundled app."
 fi
