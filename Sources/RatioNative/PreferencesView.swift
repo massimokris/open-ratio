@@ -9,7 +9,8 @@ struct PreferencesView: View {
                 Button {
                     model.appearance = model.appearance == .dark ? .light : .dark
                 } label: {
-                    Text(model.appearance.rawValue)
+                    Image(systemName: model.appearance == .dark ? "sun.max" : "moon")
+                        .font(.system(size: 13))
                         .frame(width: 88, height: 44)
                         .contentShape(Rectangle())
                 }

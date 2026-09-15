@@ -26,7 +26,7 @@ shasum -a 256 -c Ratio-Native-1.0.0-universal.dmg.sha256
 - **Ratio:** Create and Consume share classified time only. No classified time displays dashes. The tracked total includes unclassified time; the red badge opens that queue.
 - **Pause:** the left footer button pauses or resumes tracking. The clock button opens daily history; select a day to inspect its read-only source rows and use the header's back arrow to return. The footer's list button returns to today's tracking.
 - **RESET:** removes today's real durations and preserves categories and previous days. **Undo Reset** restores the most recent nonempty reset, including time tracked since it. Undo is held in memory during the current launch, so use it before quitting or performing another nonempty reset.
-- **Settings:** the right footer gear opens settings in the same panel, below the ratio. Click it again to return to activity. Appearance switches between Light and Dark; Track websites enables website capture; Demo offers Try or Exit. Command-comma and Settings menu actions open this same page.
+- **Settings:** the right footer gear opens settings in the same panel, below the ratio. Click it again to return to activity. Appearance shows a sun to switch to Light and a moon to switch to Dark; Track websites enables website capture; Demo offers Try or Exit. Command-comma and Settings menu actions open this same page.
 - **QUIT:** stops the app and saves pending real activity.
 
 The closed menu-bar item shows `NN/NN`. Its icon and text follow the active source: green ↑ for Create, red ↓ for Consume, and white ? for unclassified. Paused tracking shows two white pause bars and white text.
