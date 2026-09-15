@@ -11,6 +11,7 @@ struct PreferencesView: View {
                     Picker("Appearance", selection: $model.appearance) {
                         ForEach(AppModel.Appearance.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }.pickerStyle(.segmented)
+                        .pointingHandCursor()
                     Text("You can also switch light and dark appearance in the panel footer.")
                         .foregroundStyle(.secondary)
                 }

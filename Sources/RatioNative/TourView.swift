@@ -46,13 +46,13 @@ struct TourView: View {
                 }
                 Spacer()
                 Button("Reset Demo") { model.resetDemo(); move(to: 0) }
-                    .buttonStyle(.plain).foregroundStyle(.secondary)
+                    .buttonStyle(PanelButtonStyle())
                     .accessibilityHint("Restart the guide using only fictional activity")
             }
             Hairline()
             HStack {
                 Button("Close Tour", action: model.closeGuidedTour)
-                    .buttonStyle(.plain).foregroundStyle(.secondary)
+                    .buttonStyle(PanelButtonStyle())
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 if step > 0 {
@@ -87,15 +87,23 @@ struct TourView: View {
                 .foregroundStyle(.secondary).lineSpacing(4)
         case 2:
             sourcePicker
+            let indicatorColor = Color(nsColor: MenuIndicator.color(category: model.activeCategory, paused: model.indicatorPaused))
             HStack(spacing: 8) {
-                Image(nsImage: MenuIndicator.image(category: model.activeCategory, paused: model.indicatorPaused))
-                    .accessibilityHidden(true)
-                Text(model.menuRatio + " D").font(RatioTheme.font(size: 15)).monospacedDigit()
+                if model.indicatorPaused {
+                    Image(nsImage: MenuIndicator.image(category: model.activeCategory, paused: true))
+                        .accessibilityHidden(true)
+                } else {
+                    Text(MenuIndicator.glyph(category: model.activeCategory))
+                        .font(RatioTheme.font()).foregroundStyle(indicatorColor)
+                        .accessibilityHidden(true)
+                }
+                Text(model.menuRatio + " D").font(RatioTheme.font()).monospacedDigit()
+                    .foregroundStyle(indicatorColor)
                 Spacer(minLength: 0)
                 Text(model.session.isPaused ? "Paused" : (model.activeCategory?.title ?? "Unclassified"))
                     .font(RatioTheme.font(size: 10))
-                    .foregroundStyle(model.session.isPaused ? RatioTheme.secondary : RatioTheme.category(model.activeCategory))
-            }.padding(12).background(RatioTheme.panel, in: RoundedRectangle(cornerRadius: 6))
+                    .foregroundStyle(indicatorColor)
+            }.padding(12).background(Color.black, in: RoundedRectangle(cornerRadius: 6))
                 .accessibilityElement(children: .combine)
             Button(model.session.isPaused ? "Resume Demo" : "Pause Demo", action: model.togglePause)
                 .buttonStyle(QuietButtonStyle())
@@ -111,7 +119,7 @@ struct TourView: View {
                 .foregroundStyle(.secondary).lineSpacing(4)
         default:
             Button("Show Daily History") { model.page = .history }.buttonStyle(QuietButtonStyle())
-            Text("Use Days to return from a day’s sources. The panel’s clock button switches between history and today.")
+            Text("Use the header’s back arrow to return from a day’s sources. The footer’s list button returns to today’s tracking.")
                 .foregroundStyle(.secondary).lineSpacing(4)
             Text("Export retained days from Settings or the history context menu.")
                 .foregroundStyle(.secondary).lineSpacing(4)
@@ -131,6 +139,7 @@ struct TourView: View {
                 }
             }
             .pickerStyle(.menu)
+            .pointingHandCursor()
     }
 
     private func move(to next: Int) {

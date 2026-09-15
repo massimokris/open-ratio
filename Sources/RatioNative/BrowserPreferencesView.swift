@@ -24,6 +24,7 @@ private struct BrowserSettingsContent: View {
                         set: { coordinator.setEnabled($0, for: browser) }
                     ))
                     .toggleStyle(.switch)
+                    .pointingHandCursor()
                     .disabled(!coordinator.installedBrowsers.contains(browser) && !coordinator.isEnabled(browser))
                     .accessibilityLabel("Track websites in \(browser.name)")
                     Text(statusText(browser)).foregroundStyle(.secondary)

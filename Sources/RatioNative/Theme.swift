@@ -14,7 +14,11 @@ enum RatioTheme {
     static let secondary = adaptive(light: 0x737373, dark: 0x808080)
     static let muted = adaptive(light: 0x999999, dark: 0x666666)
     static func font(size: CGFloat = 12, weight: Font.Weight = .regular) -> Font {
-        .custom(weight == .bold ? "Menlo-Bold" : "Menlo-Regular", fixedSize: size)
+        Font(RatioTypography.nativeFont(size: size, weight: weight == .bold ? .bold : .regular))
+    }
+    static func lineSpacing(size: CGFloat = 12) -> CGFloat {
+        let font = RatioTypography.nativeFont(size: size)
+        return max(0, RatioTypography.lineHeight(size: size) - NSLayoutManager().defaultLineHeight(for: font))
     }
     static func category(_ category: ActivityCategory?) -> Color {
         switch category { case .create: return create; case .consume: return consume; case nil: return unknown }
@@ -31,14 +35,41 @@ struct PanelButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .background(configuration.isPressed ? RatioTheme.line : Color.clear)
+            .pointingHandCursor()
+    }
+}
+
+struct FooterButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        FooterButtonSurface(label: configuration.label, isPressed: configuration.isPressed)
+    }
+}
+
+private struct FooterButtonSurface<Label: View>: View {
+    let label: Label
+    let isPressed: Bool
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovered = false
+
+    private var highlighted: Bool { isEnabled && (isHovered || isPressed) }
+
+    var body: some View {
+        label
+            .foregroundStyle(highlighted ? Color.black : RatioTheme.text)
+            .background(highlighted ? Color.white : Color.clear)
+            .contentShape(Rectangle())
+            .onHover { isHovered = $0 }
+            .onChange(of: isEnabled) { if !$0 { isHovered = false } }
+            .onDisappear { isHovered = false }
+            .pointingHandCursor()
     }
 }
 
 struct Eyebrow: View {
     let text: String
     var body: some View {
-        Text(text.uppercased()).font(.system(size: 10, weight: .medium, design: .monospaced))
-            .tracking(1.8).foregroundStyle(.secondary)
+        Text(text.uppercased()).font(RatioTheme.font(size: 10))
+            .foregroundStyle(.secondary)
     }
 }
 
@@ -48,9 +79,11 @@ struct Hairline: View {
 
 struct QuietButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label.font(.system(size: 11, weight: .medium, design: .monospaced))
+        configuration.label.font(RatioTheme.font())
             .padding(.horizontal, 11).padding(.vertical, 8)
-            .background(RatioTheme.line.opacity(configuration.isPressed ? 0.9 : 0.4), in: RoundedRectangle(cornerRadius: 5))
+            .background(RatioTheme.line.opacity(configuration.isPressed ? 0.9 : 0.4),
+                        in: RoundedRectangle(cornerRadius: 5))
             .contentShape(Rectangle())
+            .pointingHandCursor()
     }
 }

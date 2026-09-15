@@ -8,18 +8,30 @@ struct TodayView: View {
         ScrollView(.vertical) {
             LazyVStack(spacing: 0) {
                 if model.activityRows.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(model.filter == .unclassified ? "ALL CLASSIFIED" : "NO ACTIVITY YET")
-                        Text(model.filter == .unclassified ? "Every source has a category." : "Your activity will appear here.")
-                            .font(RatioTheme.font(size: 11))
+                    if model.filter == .unclassified {
+                        Text("All caught up.")
+                            .font(RatioTheme.font(size: 12))
+                            .foregroundStyle(RatioTheme.text)
+                            .frame(minHeight: RatioTypography.lineHeight())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                    } else {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("NO ACTIVITY YET")
+                                .frame(minHeight: RatioTypography.lineHeight())
+                            Text("Your activity will appear here.")
+                                .frame(minHeight: RatioTypography.lineHeight())
+                        }
+                        .foregroundStyle(RatioTheme.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(16)
                     }
-                    .foregroundStyle(RatioTheme.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
                 } else {
                     ForEach(model.activityRows) { activity in
+                        let isForeground = activity.id == model.activeSource?.id
                         ActivityRow(activity: activity,
-                                    isActive: activity.id == model.activeSource?.id && !model.indicatorPaused) {
+                                    isForeground: isForeground,
+                                    isTracking: isForeground && !model.indicatorPaused) {
                             model.classify(activity.source, as: $0)
                         }
                     }
@@ -72,52 +84,66 @@ struct RatioSummaryView: View {
 
 struct ActivityRow: View {
     let activity: ActivityTotal
-    var isActive = false
-    let classify: (ActivityCategory?) -> Void
+    let isForeground: Bool
+    let isTracking: Bool
+    var classify: ((ActivityCategory?) -> Void)? = nil
     var body: some View {
         HStack(spacing: 0) {
             HStack(spacing: 8) {
                 Text(activity.source.name)
-                    .font(RatioTheme.font(weight: isActive ? .bold : .regular))
+                    .font(RatioTheme.font(weight: isForeground ? .bold : .regular))
                     .foregroundStyle(activity.category == nil ? RatioTheme.unknown : RatioTheme.text)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 2)
-                if isActive {
+                if isTracking {
                     Circle().fill(RatioTheme.category(activity.category)).frame(width: 4, height: 4)
                         .accessibilityLabel("Active source")
                 }
                 Text(PanelFormatting.elapsed(activity.seconds))
+                    .font(RatioTheme.font())
             }
             .padding(.leading, 16)
             .padding(.trailing, 9)
             .frame(width: 272, height: 44)
-            categoryButton(.create)
-            categoryButton(.consume)
+            .background(isForeground ? RatioTheme.selected : RatioTheme.background)
+            categoryCell(.create)
+            categoryCell(.consume)
         }
         .frame(height: 44)
-        .background(isActive ? RatioTheme.panel : RatioTheme.background)
+        .background(RatioTheme.background)
         .overlay(alignment: .bottom) { Hairline() }
         .contextMenu {
-            Button("Leave unclassified") { classify(nil) }
+            if let classify {
+                Button("Leave unclassified") { classify(nil) }
+            }
         }
         .accessibilityElement(children: .contain)
     }
-    private func categoryButton(_ category: ActivityCategory) -> some View {
-        Button { classify(category) } label: {
-            Text(category == .create ? "↑" : "↓")
-                .font(RatioTheme.font(size: 12, weight: .regular))
-                .foregroundStyle(activity.category == nil || activity.category == category
-                                 ? RatioTheme.category(category) : RatioTheme.muted)
-                .frame(width: 44, height: 44)
-                .background(activity.category == category ? RatioTheme.selected : Color.clear)
-                .contentShape(Rectangle())
+    private func categoryCell(_ category: ActivityCategory) -> some View {
+        Group {
+            if let classify {
+                Button { classify(category) } label: {
+                    categoryLabel(category)
+                }
+                .buttonStyle(PanelButtonStyle())
+                .help("Classify \(activity.source.name) as \(category.title)")
+            } else {
+                categoryLabel(category)
+            }
         }
-        .buttonStyle(PanelButtonStyle())
         .overlay(alignment: .leading) { Rectangle().fill(RatioTheme.line).frame(width: 0.5) }
-        .help("Classify \(activity.source.name) as \(category.title)")
         .accessibilityLabel("\(activity.source.name): \(category.title)")
         .accessibilityValue(activity.category == category ? "Selected" : "Not selected")
+    }
+    private func categoryLabel(_ category: ActivityCategory) -> some View {
+        Text(category == .create ? "↑" : "↓")
+            .font(RatioTheme.font(size: 12, weight: .regular))
+            .foregroundStyle(activity.category == nil || activity.category == category
+                             ? RatioTheme.category(category) : RatioTheme.muted)
+            .frame(width: 44, height: 44)
+            .background(activity.category == category ? RatioTheme.selected : Color.clear)
+            .contentShape(Rectangle())
     }
 }
 

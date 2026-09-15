@@ -62,6 +62,13 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
         item.button?.target = self
         item.button?.action = #selector(statusItemClicked(_:))
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        if let button = item.button {
+            let cursorView = PointingHandCursorView(frame: button.bounds)
+            cursorView.usesNonKeyWindowTracking = true
+            cursorView.autoresizingMask = [.width, .height]
+            cursorView.setAccessibilityElement(false)
+            button.addSubview(cursorView)
+        }
         let panel = RatioPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 360),
                                styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = "Ratio"
@@ -202,10 +209,20 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
     }
     private func updateStatusItem() {
         guard let button = statusItem?.button else { return }
-        button.image = MenuIndicator.image(category: model.activeCategory, paused: model.indicatorPaused)
-        button.imagePosition = .imageLeading
-        button.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
-        button.title = " " + model.menuRatio + (model.session.isDemo ? " D" : "")
+        let category = model.activeCategory
+        let paused = model.indicatorPaused
+        let font = RatioTypography.nativeFont()
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.minimumLineHeight = RatioTypography.lineHeight()
+        paragraph.maximumLineHeight = RatioTypography.lineHeight()
+        paragraph.alignment = .center
+        let color = MenuIndicator.color(category: category, paused: paused)
+        button.image = paused ? MenuIndicator.image(category: category, paused: true) : nil
+        button.imagePosition = paused ? .imageLeading : .noImage
+        button.font = font
+        button.attributedTitle = NSAttributedString(
+            string: (paused ? "" : MenuIndicator.glyph(category: category)) + " " + model.menuRatio + (model.session.isDemo ? " D" : ""),
+            attributes: [.font: font, .foregroundColor: color, .paragraphStyle: paragraph])
         button.toolTip = "Ratio · \(model.statusText)"
         button.setAccessibilityLabel("Ratio \(model.menuRatio), \(model.statusText)")
     }

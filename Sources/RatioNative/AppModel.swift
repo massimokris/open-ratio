@@ -99,9 +99,9 @@ final class AppModel: ObservableObject {
         }
     }
     var menuRatio: String {
-        guard let percentage = summary.createPercentage else { return "— : —" }
+        guard let percentage = summary.createPercentage else { return "—/—" }
         let create = Int(percentage.rounded())
-        return "\(create) : \(100 - create)"
+        return "\(create)/\(100 - create)"
     }
     var indicatorPaused: Bool { session.isPaused || (!session.isDemo && (session.isLiveIdle || !session.isSystemActive)) }
     private var capturesWebsites: Bool { !session.isDemo && !session.isPaused && session.isSystemActive }

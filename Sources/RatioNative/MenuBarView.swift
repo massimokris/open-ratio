@@ -5,13 +5,14 @@ import SwiftUI
 struct MenuBarView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
+    @State private var selectedHistoryDay: String?
     var showPreferences: () -> Void = {}
     var body: some View {
         VStack(spacing: 0) {
             RatioSummaryView(summary: model.summary)
             statusRow
             Group {
-                if model.page == .history { HistoryView() }
+                if model.page == .history { HistoryView(selectedDay: $selectedHistoryDay) }
                 else { TodayView() }
             }
             .frame(width: 360, height: 220)
@@ -19,10 +20,14 @@ struct MenuBarView: View {
             footer
         }
         .font(RatioTheme.font())
+        .tracking(0)
+        .lineSpacing(RatioTheme.lineSpacing())
         .foregroundStyle(RatioTheme.text)
         .frame(width: 360, height: 352)
         .background(RatioTheme.background)
         .preferredColorScheme(model.appearance.colorScheme)
+        .onChange(of: model.page) { _ in selectedHistoryDay = nil }
+        .onChange(of: model.session.isDemo) { _ in selectedHistoryDay = nil }
         .contextMenu {
             Button("Settings…", action: showPreferences)
             Button("How It Works…", action: model.showTour)
@@ -47,6 +52,44 @@ struct MenuBarView: View {
         }
     }
     private var statusRow: some View {
+        Group {
+            if model.page == .history {
+                HStack(spacing: 8) {
+                    Text(statusTitle)
+                        .lineLimit(1)
+                        .help(model.storageNotice ?? "Recorded days")
+                        .onTapGesture { if model.storageNotice != nil { showPreferences() } }
+                        .pointingHandCursor(model.storageNotice != nil)
+                    if let selectedHistoryDay {
+                        Text(HistoryFormatting.dateLabel(for: selectedHistoryDay)).fixedSize()
+                    }
+                    Spacer(minLength: 8)
+                    if selectedHistoryDay != nil {
+                        Button { selectedHistoryDay = nil } label: {
+                            Image(systemName: "arrow.left")
+                                .font(.system(size: 13))
+                                .foregroundStyle(RatioTheme.text)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PanelButtonStyle())
+                        .accessibilityLabel("Back to daily history")
+                        .help("Back to daily history")
+                    } else {
+                        Text("\(model.session.ledger.days.count) DAYS")
+                            .fixedSize().padding(.trailing, 16)
+                    }
+                }
+                .foregroundStyle(model.storageNotice == nil ? RatioTheme.secondary : RatioTheme.unknown)
+                .padding(.leading, 16)
+            } else {
+                trackingStatusRow
+            }
+        }
+        .frame(width: 360, height: 44)
+        .overlay(alignment: .bottom) { Hairline() }
+    }
+    private var trackingStatusRow: some View {
         HStack(spacing: 0) {
             HStack(spacing: 6) {
                 Text(statusTitle).lineLimit(1).truncationMode(.tail)
@@ -57,8 +100,10 @@ struct MenuBarView: View {
             .padding(.leading, 16)
             .padding(.trailing, 9)
             .frame(width: 272, height: 44)
+            .contentShape(Rectangle())
             .help(model.storageNotice ?? model.statusText)
             .onTapGesture { if model.storageNotice != nil { showPreferences() } }
+            .pointingHandCursor(model.storageNotice != nil)
             Button {
                 model.page = .today
                 model.filter = model.filter == .all ? .unclassified : .all
@@ -71,25 +116,31 @@ struct MenuBarView: View {
                             .frame(minWidth: 19, minHeight: 19)
                             .background(RatioTheme.consume, in: Capsule())
                     } else {
-                        Color.clear.frame(width: 19, height: 19)
+                        Text("✓")
+                            .font(RatioTheme.font())
+                            .foregroundStyle(showsCompletedClassification ? Color.black : RatioTheme.text)
+                            .frame(width: 19, height: 19)
                     }
                 }
                 .frame(width: 88, height: 44)
+                .background(showsCompletedClassification ? Color.white : Color.clear)
                 .contentShape(Rectangle())
             }
             .buttonStyle(PanelButtonStyle())
             .overlay(alignment: .leading) { Rectangle().fill(RatioTheme.line).frame(width: 0.5) }
             .help(model.filter == .unclassified ? "Show all activity" : "Show unclassified activity")
-            .accessibilityLabel("\(model.unclassifiedCount) unclassified sources")
+            .accessibilityLabel(model.unclassifiedCount == 0
+                                 ? "All sources classified" : "\(model.unclassifiedCount) unclassified sources")
             .accessibilityValue(model.filter == .unclassified ? "Showing unclassified" : "Showing all activity")
         }
-        .frame(height: 44)
-        .overlay(alignment: .bottom) { Hairline() }
+    }
+    private var showsCompletedClassification: Bool {
+        model.filter == .unclassified && model.unclassifiedCount == 0
     }
     private var statusTitle: String {
         if model.storageNotice != nil { return model.session.isDemo ? "DEMO · STORAGE" : "STORAGE ERROR" }
         if model.page == .history { return model.session.isDemo ? "DEMO HISTORY" : "HISTORY" }
-        if model.filter == .unclassified { return model.session.isDemo ? "DEMO · UNCLASSIFIED" : "UNCLASSIFIED" }
+        if model.filter == .unclassified { return model.session.isDemo ? "DEMO · TO CATEGORIZE" : "TO CATEGORIZE" }
         if model.session.isPaused { return model.session.isDemo ? "DEMO · PAUSED" : "PAUSED" }
         if model.session.isDemo { return "DEMO" }
         if model.indicatorPaused { return "AWAY" }
@@ -106,8 +157,11 @@ struct MenuBarView: View {
             footerButton(width: 44, label: model.page == .history ? "Show today's activity" : "Show history") {
                 model.page = model.page == .history ? .today : .history
             } content: {
-                HistoryGlyph()
-                    .foregroundStyle(model.page == .history ? RatioTheme.create : (colorScheme == .dark ? Color(white: 245 / 255) : Color(white: 21 / 255)))
+                if model.page == .history {
+                    Image(systemName: "list.dash").font(.system(size: 13))
+                } else {
+                    HistoryGlyph()
+                }
             }
             footerButton(width: 114, label: model.session.isDemo ? "Reset demo" : "Reset today") {
                 if model.session.isDemo { model.resetDemo() } else { model.resetToday() }
@@ -129,7 +183,7 @@ struct MenuBarView: View {
         Button(action: action) {
             content().frame(width: width, height: 44).contentShape(Rectangle())
         }
-        .buttonStyle(PanelButtonStyle())
+        .buttonStyle(FooterButtonStyle())
         .overlay(alignment: .trailing) { Rectangle().fill(RatioTheme.line).frame(width: 0.5) }
         .help(label)
         .accessibilityLabel(label)
