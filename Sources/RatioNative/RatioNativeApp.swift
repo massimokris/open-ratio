@@ -225,7 +225,12 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
             string: glyph + " " + model.menuRatio + (model.session.isDemo ? " D" : ""),
             attributes: [.font: font, .foregroundColor: color, .paragraphStyle: paragraph, .kern: RatioTypography.letterSpacing])
         if !glyph.isEmpty {
-            title.addAttribute(.font, value: RatioTypography.glyphFont(), range: NSRange(location: 0, length: glyph.utf16.count))
+            let glyphRange = NSRange(location: 0, length: glyph.utf16.count)
+            title.addAttribute(.font, value: RatioTypography.glyphFont(), range: glyphRange)
+            if glyph == "↑" || glyph == "↓" {
+                // Center the shorter Menlo arrows against the SF Mono numeral ink.
+                title.addAttribute(.baselineOffset, value: 1.0, range: glyphRange)
+            }
         }
         button.attributedTitle = title
         button.toolTip = "Ratio · \(model.statusText)"
