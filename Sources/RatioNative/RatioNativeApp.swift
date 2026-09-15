@@ -222,7 +222,7 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
         button.font = font
         button.attributedTitle = NSAttributedString(
             string: (paused ? "" : MenuIndicator.glyph(category: category)) + " " + model.menuRatio + (model.session.isDemo ? " D" : ""),
-            attributes: [.font: font, .foregroundColor: color, .paragraphStyle: paragraph])
+            attributes: [.font: font, .foregroundColor: color, .paragraphStyle: paragraph, .kern: RatioTypography.letterSpacing])
         button.toolTip = "Ratio · \(model.statusText)"
         button.setAccessibilityLabel("Ratio \(model.menuRatio), \(model.statusText)")
     }

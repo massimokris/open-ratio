@@ -2,6 +2,8 @@ import AppKit
 
 /// Native equivalent of the reference's SF Mono stack and 1.5 line height.
 enum RatioTypography {
+    static let letterSpacing: CGFloat = 0.5
+
     static func nativeFont(size: CGFloat = 12, weight: NSFont.Weight = .regular) -> NSFont {
         if let font = NSFont(name: "SFMono-Regular", size: size) ?? NSFont(name: "SF Mono", size: size) {
             let descriptor = font.fontDescriptor.addingAttributes([

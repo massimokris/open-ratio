@@ -20,7 +20,7 @@ struct MenuBarView: View {
             footer
         }
         .font(RatioTheme.font())
-        .tracking(0)
+        .tracking(RatioTypography.letterSpacing)
         .lineSpacing(RatioTheme.lineSpacing())
         .foregroundStyle(RatioTheme.text)
         .frame(width: 360, height: 352)
