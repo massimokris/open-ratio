@@ -29,7 +29,7 @@ func render(pixels: Int, filename: String) throws {
 
     let createColor = color(40, 205, 65)
     let consumeColor = color(255, 59, 48)
-    let compositionScale: CGFloat = 2
+    let compositionScale: CGFloat = 1.6
     let strokeWidth: CGFloat = 34 * compositionScale
     var arrowTransform = AffineTransform.identity
     arrowTransform.translate(x: 512, y: 578)
@@ -37,7 +37,7 @@ func render(pixels: Int, filename: String) throws {
     arrowTransform.translate(x: -512, y: -512)
 
     func strokeArrow(_ path: NSBezierPath, color: NSColor) {
-        // Keep the original arrow paths and square caps, enlarging them together.
+        // Keep the original arrow paths and square caps, scaling them together.
         path.transform(using: arrowTransform)
         path.lineWidth = strokeWidth
         path.lineCapStyle = .square
@@ -60,7 +60,7 @@ func render(pixels: Int, filename: String) throws {
     downArrow.line(to: NSPoint(x: 657, y: 476))
     strokeArrow(downArrow, color: consumeColor)
 
-    let ratioLine = NSRect(x: 174, y: 198, width: 676, height: strokeWidth)
+    let ratioLine = NSRect(x: 174, y: 232 - strokeWidth / 2, width: 676, height: strokeWidth)
     let createWidth = ratioLine.width * 0.68
     // Filled rectangles keep the split exactly 68/32, without overlapping caps.
     createColor.setFill()
