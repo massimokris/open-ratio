@@ -117,7 +117,7 @@ The delivered artifact has **not** been submitted to Apple. Apple Development id
 All 51 accounting, persistence, history, demo and native/browser tests pass. The final DMG was mounted, its app copied out and launched on the available Mac; the compact live panel, advancing activity and pause behavior were checked. Runtime and browser-permission limits are recorded in the linked evidence.
 
 - [Accounting vocabulary](CONTEXT.md) and [architecture decisions](docs/adr/)
-- [Authoritative specification](.scratch/ratio-native/spec.md) and [implementation tickets](.scratch/ratio-native/issues/)
+- Local specification and implementation tickets live in `.scratch/ratio-native/` and are intentionally excluded from Git.
 - [Internal design review](docs/design-review.md), [independent code review](docs/code-review.md) and [verification evidence](docs/verification.md)
 - [Compact-panel comparison](docs/qa/compact-panel.md), [website behavior checks](docs/qa/website-tracking.md) and [distribution notes](docs/distribution-notes.md)
 - `Sources/RatioCore`: deterministic accounting, history, CSV, persistence and hostname policy
