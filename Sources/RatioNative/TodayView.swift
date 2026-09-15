@@ -32,7 +32,6 @@ struct TodayView: View {
 
 struct RatioSummaryView: View {
     let summary: DaySummary
-    var compact = true
     var body: some View {
         HStack(spacing: 0) {
             ratioLabel(summary.createPercentage, arrow: "↑", title: "CREATING", color: RatioTheme.create)

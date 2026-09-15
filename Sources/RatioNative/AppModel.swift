@@ -106,13 +106,6 @@ final class AppModel: ObservableObject {
     var indicatorPaused: Bool { session.isPaused || (!session.isDemo && (session.isLiveIdle || !session.isSystemActive)) }
     private var capturesWebsites: Bool { !session.isDemo && !session.isPaused && session.isSystemActive }
     var browserFallbackNotice: String? { capturesWebsites ? browserTracking.fallbackNotice : nil }
-    var activeStatusText: String {
-        if session.isPaused { return "Paused" }
-        if session.isDemo { return "Demo activity" }
-        if !session.isSystemActive { return "Session inactive" }
-        if session.isLiveIdle { return "Idle · five-minute grace ended" }
-        return browserFallbackNotice ?? "In focus now"
-    }
     var statusText: String {
         if session.isPaused { return "Tracking paused" }
         if session.isDemo { return "Demo is running" }
@@ -122,11 +115,6 @@ final class AppModel: ObservableObject {
     }
     var canUndoReset: Bool { session.canUndoReset }
 
-    /// Optional browser adapters return a cached hostname source or the supplied application fallback.
-    var sourceResolver: ((NSRunningApplication, ActivitySource) -> ActivitySource)? {
-        get { foregroundMonitor.sourceResolver }
-        set { foregroundMonitor.sourceResolver = newValue; refreshTracking() }
-    }
     func refreshTracking() { receive(foregroundMonitor.sample()) }
     private func receive(_ observation: ActivityObservation) {
         now = observation.date
