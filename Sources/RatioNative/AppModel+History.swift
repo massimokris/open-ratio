@@ -24,7 +24,7 @@ extension AppModel {
         } catch {
             let alert = NSAlert()
             alert.messageText = "CSV could not be saved"
-            alert.informativeText = "\(error.localizedDescription) Your activity remains available in Ratio Native."
+            alert.informativeText = "\(error.localizedDescription) Your activity remains available in Open Ratio."
             alert.alertStyle = .warning
             alert.runModal()
         }

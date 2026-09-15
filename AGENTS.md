@@ -1,4 +1,4 @@
-# Ratio Native
+# Open Ratio
 
 Build a native macOS app using SwiftUI and AppKit. Keep the accounting domain independent of operating-system adapters and views. No webview, network service, analytics, or third-party dependencies are needed.
 

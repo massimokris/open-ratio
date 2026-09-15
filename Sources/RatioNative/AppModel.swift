@@ -49,7 +49,7 @@ final class AppModel: ObservableObject {
             storageNotice = loaded.notice
         } catch {
             persistenceBlocked = true
-            storageNotice = "Activity could not be loaded: \(error.localizedDescription) Your original files are retained. Resolve the problem in the data folder and reopen Ratio Native; new activity is only held in memory."
+            storageNotice = "Activity could not be loaded: \(error.localizedDescription) Your original files are retained. Resolve the problem in the data folder and reopen Open Ratio; new activity is only held in memory."
         }
         if ProcessInfo.processInfo.arguments.contains("--reference-demo") { startReferenceDemo() }
         else if ProcessInfo.processInfo.arguments.contains("--demo") { startDemo() }
@@ -136,7 +136,7 @@ final class AppModel: ObservableObject {
             lastSaveUptime = ProcessInfo.processInfo.systemUptime
             storageNotice = recoveryNotice
         } catch {
-            storageNotice = "Activity could not be saved: \(error.localizedDescription) New activity remains in memory; Ratio Native will retry."
+            storageNotice = "Activity could not be saved: \(error.localizedDescription) New activity remains in memory; Open Ratio will retry."
             lastSaveUptime = ProcessInfo.processInfo.systemUptime
         }
     }

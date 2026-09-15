@@ -6,7 +6,7 @@ ratio_dist_dir="$ratio_project_dir/dist"
 ratio_sign_identity="${RATIO_SIGN_IDENTITY:--}"
 
 if [[ "$(uname -s)" != Darwin ]]; then
-    echo "Ratio Native must be built on macOS with Xcode or Command Line Tools." >&2
+    echo "Open Ratio must be built on macOS with Xcode or Command Line Tools." >&2
     exit 1
 fi
 if [[ "$ratio_sign_identity" != - && "$ratio_sign_identity" != "Developer ID Application: "* ]]; then
@@ -17,7 +17,7 @@ fi
 mkdir -p "$ratio_dist_dir"
 ratio_build_stage="$(mktemp -d "$ratio_dist_dir/.ratio-build.XXXXXX")"
 trap 'rm -rf -- "$ratio_build_stage"' EXIT
-ratio_app="$ratio_build_stage/Ratio Native.app"
+ratio_app="$ratio_build_stage/Open Ratio.app"
 mkdir -p "$ratio_app/Contents/MacOS" "$ratio_app/Contents/Resources"
 ratio_sdk="$(xcrun --sdk macosx --show-sdk-path)"
 ratio_binaries=()
@@ -50,9 +50,9 @@ fi
 "$ratio_project_dir/scripts/verify-release.sh" --app "$ratio_app"
 
 # Replace only this script's generated bundle, after a successful build and verification.
-rm -rf -- "$ratio_dist_dir/Ratio Native.app"
-mv "$ratio_app" "$ratio_dist_dir/Ratio Native.app"
-echo "Built: $ratio_dist_dir/Ratio Native.app"
+rm -rf -- "$ratio_dist_dir/Open Ratio.app"
+mv "$ratio_app" "$ratio_dist_dir/Open Ratio.app"
+echo "Built: $ratio_dist_dir/Open Ratio.app"
 if [[ "$ratio_sign_identity" == - ]]; then
     echo "Signing: ad hoc with hardened runtime; not notarized."
 else

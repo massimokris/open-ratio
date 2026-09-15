@@ -11,7 +11,7 @@ final class ForegroundActivityMonitorTests: XCTestCase {
             ("com.example.settings", "System Settings"),
             ("com.example.finder", "Finder"),
             ("com.example.loginwindow", "loginwindow"),
-            ("com.example.ratio", "Ratio Native"),
+            ("com.example.ratio", "Open Ratio"),
             ("com.apple.finder.helper", "Finder Helper")
         ]
         var notifiedForeground: NSRunningApplication?

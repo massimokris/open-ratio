@@ -1,13 +1,13 @@
-# Ratio Native
+# Open Ratio
 
 A local macOS menu bar app for noticing the balance between **Create** and **Consume**. Its compact 360-point native panel follows the supplied reference panel. SwiftUI and AppKit render the interface; a separate Swift domain accounts for time. There is no webview, network service, account, analytics or third-party dependency.
 
 ## Install
 
-1. Open `dist/Ratio-Native-1.0.0-universal.dmg`.
-2. Drag **Ratio Native.app** to the **Applications** shortcut.
-3. Eject the image and open **Ratio Native** from Applications. The panel opens at launch.
-4. Click the ratio in the menu bar to reopen or close the panel. **Right-click the menu bar ratio** for **Settings…**, **Try Demo**, **Undo Reset** and **Quit Ratio Native**. The app does not show a Dock icon.
+1. Open `dist/Open-Ratio-1.0.0-universal.dmg`.
+2. Drag **Open Ratio.app** to the **Applications** shortcut.
+3. Eject the image and open **Open Ratio** from Applications. The panel opens at launch.
+4. Click the ratio in the menu bar to reopen or close the panel. **Right-click the menu bar ratio** for **Settings…**, **Try Demo**, **Undo Reset** and **Quit Open Ratio**. The app does not show a Dock icon.
 
 The app targets **macOS 13 or later** and contains both **arm64** and **x86_64** release code. Native runtime verification is limited to the available Apple Silicon Mac running macOS **26.5.2**; Intel hardware and macOS 13 have not been runtime-tested.
 
@@ -17,7 +17,7 @@ To check the downloaded image against its adjacent checksum file:
 
 ```sh
 cd dist
-shasum -a 256 -c Ratio-Native-1.0.0-universal.dmg.sha256
+shasum -a 256 -c Open-Ratio-1.0.0-universal.dmg.sha256
 ```
 
 ## Use the panel
@@ -35,7 +35,7 @@ The compact panel and menu-bar ratio use SF Mono at 12 points with 0.4 points of
 
 Foreground activity counts automatically while the app runs. The first five minutes without input count as an idle grace for reading. Sleep, an inactive session and unexplained gaps over ten seconds are excluded; the app never fills time while it was closed. Days use the local date when time was recorded and keep that date after timezone changes.
 
-System Settings, Finder, loginwindow and Ratio Native are excluded from new tracking. Time spent in those apps is not attributed to the previous app; tracking resumes when another app becomes active. Existing history and categories are retained.
+System Settings, Finder, loginwindow and Open Ratio are excluded from new tracking. Time spent in those apps is not attributed to the previous app; tracking resumes when another app becomes active. Existing history and categories are retained.
 
 ### Demo
 
@@ -61,6 +61,8 @@ Denied access, missing tabs, unsupported URLs and timeouts fall back to app trac
 | Appearance and website-tracking preference | macOS UserDefaults domain `com.rationative.RatioNative`, normally `~/Library/Preferences/com.rationative.RatioNative.plist` |
 | CSV export | A local location you choose in the Save dialog |
 
+Open Ratio keeps the existing data folder and preference domain so your saved history and settings remain available.
+
 The panel context menu has **Show Data Folder**. JSON writes are atomic and retain a previous valid snapshot. Storage errors appear in the panel status help; unreadable originals are preserved. If the app cannot load safely, new activity stays in memory until you fix the reported problem and reopen it. If saving fails, it retains new activity in memory and retries. Copy the entire data folder while the app is quit before manually repairing files; keep any corrupt originals. An unsupported newer schema is left unchanged and requires a compatible app version.
 
 **Export CSV…** remains available in the panel/history context menu; the settings page has no export button. It exports retained days, source names, current categories and seconds. In demo mode it exports only the labeled fictional dataset; leave demo to export real activity. The export is local and does not change activity.
@@ -78,15 +80,15 @@ swift test
 ./scripts/package-dmg.sh
 ```
 
-`build.sh` compiles optimized arm64 and x86_64 executables with explicit macOS 13.0 targets in separate `build/swiftpm-<architecture>` scratch directories, combines them with `lipo`, supplies the original icon and bundle metadata, and signs with the browser Automation entitlement. It verifies each architecture before replacing `dist/Ratio Native.app`.
+`build.sh` compiles optimized arm64 and x86_64 executables with explicit macOS 13.0 targets in separate `build/swiftpm-<architecture>` scratch directories, combines them with `lipo`, supplies the original icon and bundle metadata, and signs with the browser Automation entitlement. It verifies each architecture before replacing `dist/Open Ratio.app`.
 
 `package-dmg.sh` builds again by default so it packages current source. It creates a compressed DMG containing the app, an Applications symlink and an installation note; verifies it; then writes a SHA-256 file. To package an already verified app without rebuilding (for example, a notarized app), run:
 
 ```sh
 ./scripts/package-dmg.sh --skip-build
-./scripts/verify-release.sh --app 'dist/Ratio Native.app'
-./scripts/verify-release.sh --dmg 'dist/Ratio-Native-1.0.0-universal.dmg'
-open 'dist/Ratio Native.app'
+./scripts/verify-release.sh --app 'dist/Open Ratio.app'
+./scripts/verify-release.sh --dmg 'dist/Open-Ratio-1.0.0-universal.dmg'
+open 'dist/Open Ratio.app'
 ```
 
 The verifier checks both architectures, macOS minimum version, menu bar bundle metadata, app icon presence, strict code signatures, hardened runtime and the Apple-events entitlement. For DMGs it also checks image integrity, read-only mounting, the installation note and Applications symlink, then detaches normally. It does not launch the app or claim Gatekeeper/notarization acceptance. Build outputs in `build/`, `.build/` and `dist/` are ignored by Git. To regenerate the original icon:

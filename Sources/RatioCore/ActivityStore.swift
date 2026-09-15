@@ -129,7 +129,7 @@ public struct ActivityStore {
         var errorDescription: String? {
             switch self {
             case let .unsupportedSchema(version, url):
-                return "Activity at \(url.path) uses unsupported schema \(version). Open it with a newer compatible version of Ratio. The file has been left unchanged."
+                return "Activity at \(url.path) uses unsupported schema \(version). Open it with a newer compatible version of Open Ratio. The file has been left unchanged."
             case let .fileOperation(operation, url, underlying):
                 return "\(operation) at \(url.path). \(underlying.localizedDescription) Check access to the data folder."
             }

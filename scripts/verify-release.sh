@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -ne 2 || ( "$1" != --app && "$1" != --dmg ) ]]; then
-    echo "Usage: $0 --app '/path/Ratio Native.app' | --dmg '/path/release.dmg'" >&2
+    echo "Usage: $0 --app '/path/Open Ratio.app' | --dmg '/path/release.dmg'" >&2
     exit 1
 fi
 ratio_verify_stage="$(mktemp -d "${TMPDIR:-/tmp}/ratio-verify.XXXXXX")"
@@ -24,6 +24,8 @@ ratio_verify_app() {
     local ratio_executable="$ratio_app/Contents/MacOS/RatioNative"
     local ratio_arch ratio_build_info ratio_signature
     /usr/bin/plutil -lint "$ratio_plist"
+    [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$ratio_plist")" == "Open Ratio" ]]
+    [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$ratio_plist")" == "Open Ratio" ]]
     [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$ratio_plist")" == RatioNative ]]
     [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$ratio_plist")" == com.rationative.RatioNative ]]
     [[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundlePackageType' "$ratio_plist")" == APPL ]]
@@ -56,14 +58,14 @@ else
     ratio_mounted=true
     [[ -L "$ratio_verify_stage/mount/Applications" ]]
     [[ "$(readlink "$ratio_verify_stage/mount/Applications")" == /Applications ]]
-    [[ -s "$ratio_verify_stage/mount/Install Ratio Native.txt" ]]
+    [[ -s "$ratio_verify_stage/mount/Install Open Ratio.txt" ]]
     # A successful write would violate the requested read-only verification mount.
     if touch "$ratio_verify_stage/mount/.ratio-write-check" 2> "$ratio_verify_stage/write-check.log"; then
         rm "$ratio_verify_stage/mount/.ratio-write-check"
         echo "The disk image unexpectedly allowed writes." >&2
         exit 1
     fi
-    ratio_verify_app "$ratio_verify_stage/mount/Ratio Native.app"
+    ratio_verify_app "$ratio_verify_stage/mount/Open Ratio.app"
     /usr/bin/hdiutil detach "$ratio_verify_stage/mount"
     ratio_mounted=false
     echo "Verified DMG integrity, read-only mount, Applications shortcut, installation note and bundled app."

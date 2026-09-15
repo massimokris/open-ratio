@@ -1,6 +1,6 @@
 # Create and Consume
 
-Ratio Native helps a person notice the balance between making things and taking things in during their computer use.
+Open Ratio helps a person notice the balance between making things and taking things in during their computer use.
 
 ## Language
 

@@ -190,7 +190,7 @@ struct MenuBarView: View {
             footerButton(width: 114, label: model.session.isDemo ? "Reset demo" : "Reset today") {
                 if model.session.isDemo { model.resetDemo() } else { model.resetToday() }
             } content: { Text("RESET") }
-            footerButton(width: 114, label: "Quit Ratio Native") {
+            footerButton(width: 114, label: "Quit Open Ratio") {
                 NSApplication.shared.terminate(nil)
             } content: { Text("QUIT") }
             footerButton(width: 44, label: model.page == .preferences ? "Show today's activity" : "Show settings",

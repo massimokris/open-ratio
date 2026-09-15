@@ -5,7 +5,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleDisplayName</key>
-    <string>Ratio Native</string>
+    <string>Open Ratio</string>
     <key>CFBundleExecutable</key>
     <string>RatioNative</string>
     <key>CFBundleIconFile</key>
@@ -15,7 +15,7 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Ratio Native</string>
+    <string>Open Ratio</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -33,6 +33,6 @@
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>When you enable website tracking, Ratio Native reads the active tab address only in your default browser. Only the hostname is stored locally.</string>
+    <string>When you enable website tracking, Open Ratio reads the active tab address only in your default browser. Only the hostname is stored locally.</string>
 </dict>
 </plist>

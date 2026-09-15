@@ -20,7 +20,7 @@ private struct RatioCommands: Commands {
             Button("Settings…", action: delegate.showPreferences).keyboardShortcut(",")
         }
         CommandGroup(replacing: .newItem) {
-            Button("Show Ratio", action: delegate.showPanel).keyboardShortcut("1")
+            Button("Show Open Ratio", action: delegate.showPanel).keyboardShortcut("1")
         }
         CommandGroup(replacing: .undoRedo) {
             Button("Undo Reset", action: model.undoResetToday)
@@ -69,7 +69,7 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate {
         }
         let panel = RatioPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 360),
                                styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.title = "Ratio"
+        panel.title = "Open Ratio"
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
@@ -189,8 +189,8 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         button.attributedTitle = title
-        button.toolTip = "Ratio · \(model.statusText)"
-        button.setAccessibilityLabel("Ratio \(model.menuRatio), \(model.statusText)")
+        button.toolTip = "Open Ratio · \(model.statusText)"
+        button.setAccessibilityLabel("Open Ratio \(model.menuRatio), \(model.statusText)")
     }
     private static func nativeAppearance(_ appearance: AppModel.Appearance) -> NSAppearance? {
         switch appearance {
@@ -200,7 +200,7 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate {
     }
     private func contextMenu() -> NSMenu {
         let menu = NSMenu()
-        add("Show Ratio", to: menu, action: #selector(openPanel))
+        add("Show Open Ratio", to: menu, action: #selector(openPanel))
         add("Settings…", to: menu, action: #selector(openPreferences), key: ",")
         menu.addItem(.separator())
         add(model.session.isPaused ? "Resume Tracking" : "Pause Tracking", to: menu, action: #selector(togglePause))
@@ -209,7 +209,7 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate {
         undo.isEnabled = model.canUndoReset
         menu.autoenablesItems = false
         menu.addItem(.separator())
-        add("Quit Ratio Native", to: menu, action: #selector(quit), key: "q")
+        add("Quit Open Ratio", to: menu, action: #selector(quit), key: "q")
         return menu
     }
     @discardableResult

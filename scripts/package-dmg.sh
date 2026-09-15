@@ -11,24 +11,24 @@ if [[ $# -eq 0 ]]; then
     "$ratio_project_dir/scripts/build.sh"
 fi
 
-ratio_app="$ratio_dist_dir/Ratio Native.app"
+ratio_app="$ratio_dist_dir/Open Ratio.app"
 "$ratio_project_dir/scripts/verify-release.sh" --app "$ratio_app"
 ratio_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$ratio_app/Contents/Info.plist")"
 if [[ ! "$ratio_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     echo "Expected a three-part numeric app version; found '$ratio_version'." >&2
     exit 1
 fi
-ratio_dmg_name="Ratio-Native-$ratio_version-universal.dmg"
+ratio_dmg_name="Open-Ratio-$ratio_version-universal.dmg"
 ratio_package_stage="$(mktemp -d "$ratio_dist_dir/.ratio-package.XXXXXX")"
 trap 'rm -rf -- "$ratio_package_stage"' EXIT
 mkdir "$ratio_package_stage/image"
-/usr/bin/ditto "$ratio_app" "$ratio_package_stage/image/Ratio Native.app"
+/usr/bin/ditto "$ratio_app" "$ratio_package_stage/image/Open Ratio.app"
 ln -s /Applications "$ratio_package_stage/image/Applications"
-cat > "$ratio_package_stage/image/Install Ratio Native.txt" <<'INSTALL'
-RATIO NATIVE — INSTALLATION
+cat > "$ratio_package_stage/image/Install Open Ratio.txt" <<'INSTALL'
+OPEN RATIO — INSTALLATION
 
-1. Drag Ratio Native.app onto the Applications shortcut.
-2. Eject this disk image, then open Ratio Native from Applications.
+1. Drag Open Ratio.app onto the Applications shortcut.
+2. Eject this disk image, then open Open Ratio from Applications.
 3. The compact panel opens at launch. Click its ratio in the menu bar to reopen it.
    The footer gear opens Appearance, Track websites and Demo in that same panel.
    Right-click the menu bar ratio for additional commands and Quit.
@@ -51,7 +51,7 @@ See the source project's README.md for builds, permissions, recovery and signing
 This is an independent implementation, not an official Ratio distribution.
 INSTALL
 
-/usr/bin/hdiutil create -volname "Ratio Native $ratio_version" \
+/usr/bin/hdiutil create -volname "Open Ratio $ratio_version" \
     -srcfolder "$ratio_package_stage/image" -format UDZO -fs HFS+ \
     -ov "$ratio_package_stage/$ratio_dmg_name"
 "$ratio_project_dir/scripts/verify-release.sh" --dmg "$ratio_package_stage/$ratio_dmg_name"
