@@ -43,11 +43,13 @@ System Settings, Finder, loginwindow and Ratio Native are excluded from new trac
 
 ### Optional websites and permissions
 
-Website capture defaults **off for each browser**. In Settings, independently enable Safari, Google Chrome, Microsoft Edge, Brave or Chromium. Supported installed browsers are listed; Safari and previously enabled browsers remain visible. When an enabled browser is foreground, macOS may request **Automation** permission for that browser.
+Settings has one **Track websites** switch, with the name of your macOS default browser. When enabled, only that browser tracks individual websites. Other browsers each count as one application—for example, with Brave as default, Safari activity stays under Safari. Website tracking supports Safari, Google Chrome, Microsoft Edge, Brave and Chromium as the default browser; unsupported or undetected defaults use app tracking.
+
+The switch starts **off** for new installations. Upgrades inherit only the current default browser's previous opt-in. The setting follows later changes to your macOS default browser, clearing cached website activity from the old browser. macOS may request **Automation** permission when you use the default browser.
 
 Only HTTP(S) **hostnames** are retained: for example, `https://www.example.com/private?q=secret` becomes `example.com`. Paths, searches, fragments, credentials and page titles are not stored. Each website has its own initially unclassified category; it does not inherit the browser's category. No browser is launched to query it.
 
-Denied access, missing tabs, unsupported URLs and timeouts visibly fall back to **APP TRACKING**. Read the status help or Settings for the reason. To retry a denied browser, allow it in **System Settings → Privacy & Security → Automation**, then select **Retry** in Ratio's Settings or toggle that browser off/on. App tracking requires no Accessibility permission, and website tracking requires no browser JavaScript setting. See [website verification](docs/qa/website-tracking.md) for the supported contract and test scope. Actual browser consent grants are not claimed by the automated tests.
+Denied access, missing tabs, unsupported URLs and timeouts visibly fall back to **APP TRACKING**. Read the status help or Settings for the reason. To retry, allow the default browser in **System Settings → Privacy & Security → Automation**, then select **Retry access** in Ratio's Settings or turn Track websites off/on. App tracking requires no Accessibility permission, and website tracking requires no browser JavaScript setting. See [website verification](docs/qa/website-tracking.md) for the supported contract and test scope. Actual browser consent grants are not claimed by the automated tests.
 
 ## Local data, recovery and export
 
@@ -56,7 +58,7 @@ Denied access, missing tabs, unsupported URLs and timeouts visibly fall back to 
 | Real daily activity and remembered categories | `~/Library/Application Support/RatioNative/activity.json` |
 | Last valid saved snapshot | `~/Library/Application Support/RatioNative/activity-backup.json` |
 | Preserved unreadable originals, if recovery was needed | `~/Library/Application Support/RatioNative/activity-corrupt-<UUID>.json` |
-| Appearance and per-browser opt-ins | macOS UserDefaults domain `com.rationative.RatioNative`, normally `~/Library/Preferences/com.rationative.RatioNative.plist` |
+| Appearance and website-tracking preference | macOS UserDefaults domain `com.rationative.RatioNative`, normally `~/Library/Preferences/com.rationative.RatioNative.plist` |
 | CSV export | A local location you choose in the Save dialog |
 
 Settings has **Show Data Folder**. JSON writes are atomic and retain a previous valid snapshot. Storage errors appear in the panel status and Settings; unreadable originals are preserved. If the app cannot load safely, new activity stays in memory until you fix the reported problem and reopen it. If saving fails, it retains new activity in memory and retries. Copy the entire data folder while the app is quit before manually repairing files; keep any corrupt originals. An unsupported newer schema is left unchanged and requires a compatible app version.

@@ -33,6 +33,6 @@
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>With your permission, Ratio Native reads the active tab address only in browsers you enable to classify website time. Only the hostname is stored locally.</string>
+    <string>When you enable website tracking, Ratio Native reads the active tab address only in your default browser. Only the hostname is stored locally.</string>
 </dict>
 </plist>

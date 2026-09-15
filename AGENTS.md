@@ -20,7 +20,7 @@ Read `CONTEXT.md` and relevant `docs/adr/` before changing behavior. Single cont
 - The user delegated clarification to an internal two-agent grill. Its settled seams, scope and ticket granularity are recorded in `docs/design-review.md`; do not reopen routine approvals.
 - Use system frameworks only. Compile regularly with `swift build`; run focused tests while implementing and `swift test` at integrated completion.
 - Changes must preserve real activity across demo entry, reset and exit. Never manufacture tracked real data.
-- Keep website capture optional, per browser, host only. Permission failures must degrade visibly to app-level tracking.
+- Keep website capture optional and host only, with one toggle for the system default browser. Other browsers and permission failures must use app-level tracking.
 - Commit only owned changes to the current branch. The coordinator runs the final two-axis code review against the planning baseline after implementation tickets land.
 - Claim a ticket by changing Status to in-progress; mark completed only with acceptance evidence. The parent spec stays unchanged.
 

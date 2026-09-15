@@ -33,7 +33,7 @@ RATIO NATIVE — INSTALLATION
    Right-click the menu bar ratio for Settings, How It Works, Try Demo and Quit.
 
 Requires macOS 13 or later. This universal app contains arm64 and x86_64 code.
-Activity and preferences stay on your Mac. Website tracking is optional per browser.
+Activity and preferences stay on your Mac. Website tracking is optional and uses only your default browser.
 
 The default local build is ad-hoc signed and is not notarized. If macOS blocks a
 downloaded copy, first review its source and checksum. For a copy you trust, use

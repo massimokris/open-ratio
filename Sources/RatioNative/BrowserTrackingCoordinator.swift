@@ -22,33 +22,78 @@ enum SupportedBrowser: String, CaseIterable, Identifiable {
     var preferenceKey: String { "websiteTracking.\(rawValue).enabled" }
 }
 
-/// Owns local opt-ins and the native boundary; views see statuses, never a full URL.
+struct DefaultBrowser: Equatable {
+    let bundleIdentifier: String
+    let name: String
+}
+
+private func systemDefaultBrowser() -> DefaultBrowser? {
+    guard let webURL = URL(string: "https://example.com"),
+          let applicationURL = NSWorkspace.shared.urlForApplication(toOpen: webURL),
+          let bundle = Bundle(url: applicationURL), let identifier = bundle.bundleIdentifier else { return nil }
+    let name = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+        ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
+        ?? applicationURL.deletingPathExtension().lastPathComponent
+    return DefaultBrowser(bundleIdentifier: identifier, name: name)
+}
+
+/// Owns the local opt-in and native boundary; views see statuses, never a full URL.
 @MainActor
 final class BrowserTrackingCoordinator: ObservableObject {
+    private static let preferenceKey = "websiteTracking.enabled"
     private var policy: WebsiteTrackingPolicy
     private let defaults: UserDefaults
-    private let queryQueue = DispatchQueue(label: "RatioNative.browser-capture", qos: .utility)
+    private let defaultBrowserProvider: () -> DefaultBrowser?
+    private let foregroundApplication: () -> NSRunningApplication?
+    private let uptime: () -> TimeInterval
+    private let capture: BrowserCapturing
     private var queryControl: BrowserQueryControl?
-    @Published private(set) var installedBrowsers: Set<SupportedBrowser> = []
+    @Published private(set) var defaultBrowser: DefaultBrowser?
+    @Published private(set) var isWebsiteTrackingEnabled: Bool
     var onChange: (() -> Void)?
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard,
+         defaultBrowserProvider: @escaping () -> DefaultBrowser? = { systemDefaultBrowser() },
+         foregroundApplication: @escaping () -> NSRunningApplication? = { NSWorkspace.shared.frontmostApplication },
+         uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+         capture: BrowserCapturing? = nil) {
         self.defaults = defaults
-        policy = WebsiteTrackingPolicy(enabledBrowsers: Set(SupportedBrowser.allCases.filter {
-            defaults.bool(forKey: $0.preferenceKey)
-        }.map(\.rawValue)))
-        refreshAvailability()
+        self.defaultBrowserProvider = defaultBrowserProvider
+        self.foregroundApplication = foregroundApplication
+        self.uptime = uptime
+        self.capture = capture ?? NativeBrowserCapture()
+        let defaultBrowser = defaultBrowserProvider()
+        self.defaultBrowser = defaultBrowser
+        let supportedBrowser = defaultBrowser.flatMap { SupportedBrowser(rawValue: $0.bundleIdentifier) }
+        let enabled = defaults.object(forKey: Self.preferenceKey) != nil
+            ? defaults.bool(forKey: Self.preferenceKey)
+            : supportedBrowser.map { defaults.bool(forKey: $0.preferenceKey) } ?? false
+        isWebsiteTrackingEnabled = enabled
+        defaults.set(enabled, forKey: Self.preferenceKey)
+        policy = WebsiteTrackingPolicy(enabledBrowsers: enabled ? Set(supportedBrowser.map { [$0.rawValue] } ?? []) : [])
     }
 
-    var browsers: [SupportedBrowser] {
-        SupportedBrowser.allCases.filter { $0 == .safari || installedBrowsers.contains($0) || isEnabled($0) }
+    var supportedDefaultBrowser: SupportedBrowser? {
+        defaultBrowser.flatMap { SupportedBrowser(rawValue: $0.bundleIdentifier) }
     }
-    func isEnabled(_ browser: SupportedBrowser) -> Bool { policy.enabledBrowsers.contains(browser.rawValue) }
-    func status(_ browser: SupportedBrowser) -> WebsiteCaptureStatus { policy.status(for: browser.rawValue) }
-    func refreshAvailability() {
-        installedBrowsers = Set(SupportedBrowser.allCases.filter {
-            NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0.rawValue) != nil
-        })
+    var status: WebsiteCaptureStatus? {
+        supportedDefaultBrowser.map { policy.status(for: $0.rawValue) }
+    }
+
+    func refreshDefaultBrowser() {
+        let detected = defaultBrowserProvider()
+        guard detected != defaultBrowser else { return }
+        let previousIdentifier = defaultBrowser?.bundleIdentifier
+        defaultBrowser = detected
+        if previousIdentifier != detected?.bundleIdentifier {
+            queryControl?.cancel()
+            for browser in policy.enabledBrowsers { policy.setEnabled(false, for: browser) }
+            if isWebsiteTrackingEnabled, let browser = supportedDefaultBrowser {
+                policy.setEnabled(true, for: browser.rawValue)
+            }
+            policy.setForeground(nil)
+        }
+        onChange?()
     }
 
     func openAutomationSettings() {
@@ -57,15 +102,25 @@ final class BrowserTrackingCoordinator: ObservableObject {
         }
     }
 
-    func setEnabled(_ enabled: Bool, for browser: SupportedBrowser) {
+    func setWebsiteTrackingEnabled(_ enabled: Bool) {
+        guard enabled != isWebsiteTrackingEnabled else {
+            refreshDefaultBrowser()
+            return
+        }
         objectWillChange.send()
         queryControl?.cancel()
-        policy.setEnabled(enabled, for: browser.rawValue)
-        defaults.set(enabled, forKey: browser.preferenceKey)
+        isWebsiteTrackingEnabled = enabled
+        if let browser = supportedDefaultBrowser { policy.setEnabled(enabled, for: browser.rawValue) }
+        defaults.set(enabled, forKey: Self.preferenceKey)
+        // A default change can synchronously refresh tracking through onChange. Apply the
+        // user's choice first so an opt-out cannot start a capture for the new default.
+        refreshDefaultBrowser()
         onChange?()
     }
 
-    func retry(_ browser: SupportedBrowser) {
+    func retryAccess() {
+        refreshDefaultBrowser()
+        guard let browser = supportedDefaultBrowser else { return }
         objectWillChange.send()
         queryControl?.cancel()
         policy.retry(browser.rawValue)
@@ -73,8 +128,9 @@ final class BrowserTrackingCoordinator: ObservableObject {
     }
 
     func foregroundChanged(_ application: NSRunningApplication?) {
+        refreshDefaultBrowser()
         let identity = application.flatMap { application -> BrowserIdentity? in
-            guard let bundle = application.bundleIdentifier, SupportedBrowser(rawValue: bundle) != nil,
+            guard let bundle = application.bundleIdentifier, bundle == supportedDefaultBrowser?.rawValue,
                   !application.isTerminated else { return nil }
             return BrowserIdentity(bundleIdentifier: bundle, processIdentifier: application.processIdentifier)
         }
@@ -86,29 +142,25 @@ final class BrowserTrackingCoordinator: ObservableObject {
 
     func resolve(_ application: NSRunningApplication, fallingBackTo source: ActivitySource) -> ActivitySource {
         foregroundChanged(application)
-        let uptime = ProcessInfo.processInfo.systemUptime
+        let uptime = uptime()
         if let request = policy.beginQuery(at: uptime), let browser = SupportedBrowser(rawValue: request.browser.bundleIdentifier) {
             objectWillChange.send()
-            let control = BrowserQueryControl()
-            queryControl = control
-            queryQueue.async { [weak self] in
-                let result = BrowserAppleEvents.capture(browser, processIdentifier: request.browser.processIdentifier, control: control)
-                DispatchQueue.main.async { [weak self] in
-                    guard let self else { return }
-                    self.foregroundChanged(NSWorkspace.shared.frontmostApplication)
-                    self.objectWillChange.send()
-                    self.policy.complete(request, with: result, at: ProcessInfo.processInfo.systemUptime)
-                    if self.queryControl === control { self.queryControl = nil }
-                    self.onChange?()
-                }
+            let control = capture.capture(browser, processIdentifier: request.browser.processIdentifier) { [weak self] result in
+                guard let self else { return }
+                self.foregroundChanged(self.foregroundApplication())
+                self.objectWillChange.send()
+                self.policy.complete(request, with: result, at: self.uptime())
+                self.queryControl = nil
+                self.onChange?()
             }
+            queryControl = control
             // TCC consent can outlive an Apple event's reply timeout. Fall back promptly while
             // retaining the one native slot until that operation returns; never pile up dialogs.
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
                 guard let self else { return }
-                self.foregroundChanged(NSWorkspace.shared.frontmostApplication)
+                self.foregroundChanged(self.foregroundApplication())
                 self.objectWillChange.send()
-                if self.policy.timeout(request, at: ProcessInfo.processInfo.systemUptime) {
+                if self.policy.timeout(request, at: self.uptime()) {
                     control.cancel()
                     self.onChange?()
                 }
@@ -120,10 +172,10 @@ final class BrowserTrackingCoordinator: ObservableObject {
     var fallbackNotice: String? {
         guard let foreground = policy.foreground, policy.enabledBrowsers.contains(foreground.bundleIdentifier),
               let browser = SupportedBrowser(rawValue: foreground.bundleIdentifier) else { return nil }
-        switch status(browser) {
+        switch policy.status(for: browser.rawValue) {
         case .disabled: return nil
         case .tracking:
-            return policy.currentHost(at: ProcessInfo.processInfo.systemUptime) == nil
+            return policy.currentHost(at: uptime()) == nil
                 ? "\(browser.name) app tracking · refreshing website access" : nil
         case .waiting, .checking: return "\(browser.name) app tracking · checking website access"
         case .denied: return "\(browser.name) app tracking · website access denied"
@@ -136,11 +188,33 @@ final class BrowserTrackingCoordinator: ObservableObject {
 
 /// A queued capture checks cancellation before sending an event, even after opt-out or focus loss.
 // The only mutable field is protected by the lock on both worker and main queues.
-private final class BrowserQueryControl: @unchecked Sendable {
+final class BrowserQueryControl: @unchecked Sendable {
     private let lock = NSLock()
     private var cancelled = false
     var isCancelled: Bool { lock.lock(); defer { lock.unlock() }; return cancelled }
     func cancel() { lock.lock(); cancelled = true; lock.unlock() }
+}
+
+@MainActor
+protocol BrowserCapturing {
+    /// Completion is delivered asynchronously on the main actor, with no URL retained.
+    func capture(_ browser: SupportedBrowser, processIdentifier: Int32,
+                 completion: @escaping @MainActor (WebsiteCaptureResult) -> Void) -> BrowserQueryControl
+}
+
+@MainActor
+private final class NativeBrowserCapture: BrowserCapturing {
+    private let queryQueue = DispatchQueue(label: "RatioNative.browser-capture", qos: .utility)
+
+    func capture(_ browser: SupportedBrowser, processIdentifier: Int32,
+                 completion: @escaping @MainActor (WebsiteCaptureResult) -> Void) -> BrowserQueryControl {
+        let control = BrowserQueryControl()
+        queryQueue.async {
+            let result = BrowserAppleEvents.capture(browser, processIdentifier: processIdentifier, control: control)
+            DispatchQueue.main.async { completion(result) }
+        }
+        return control
+    }
 }
 
 private enum BrowserAppleEvents {
@@ -160,7 +234,9 @@ private enum BrowserAppleEvents {
                                            targetDescriptor: target, returnID: AEReturnID(kAutoGenerateReturnID),
                                            transactionID: AETransactionID(kAnyTransactionID))
         event.setParam(url, forKeyword: AEKeyword(keyDirectObject))
-        guard !control.isCancelled else { return .unavailable }
+        // Recheck at the native boundary: the HTTPS handler may change while work is queued.
+        guard !control.isCancelled,
+              systemDefaultBrowser()?.bundleIdentifier == browser.rawValue else { return .unavailable }
         do {
             let reply = try event.sendEvent(options: [.waitForReply, .neverInteract], timeout: 2)
             let error = reply.paramDescriptor(forKeyword: AEKeyword(keyErrorNumber))?.int32Value ?? 0

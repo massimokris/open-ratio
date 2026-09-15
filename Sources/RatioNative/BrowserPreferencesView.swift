@@ -14,54 +14,53 @@ private struct BrowserSettingsContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Eyebrow(text: "Website activity")
-            Text("Application tracking is the default.").font(RatioTheme.font(size: 13))
-            Text("Enable a browser, then bring it to the front. macOS may ask you to allow Automation access. Only HTTP(S) hostnames are retained; page titles, paths and searches are never recorded.")
+            Toggle("Track websites", isOn: Binding(
+                get: { coordinator.isWebsiteTrackingEnabled },
+                set: { coordinator.setWebsiteTrackingEnabled($0) }
+            ))
+            .toggleStyle(.switch)
+            .pointingHandCursor()
+            Text("Default browser: \(coordinator.defaultBrowser?.name ?? "Not detected")")
+                .font(RatioTheme.font(size: 13))
+            Text("Only your default browser tracks individual websites. Other browsers are tracked as apps. This follows changes to your default browser in macOS.")
                 .foregroundStyle(.secondary).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
-            ForEach(coordinator.browsers) { browser in
-                VStack(alignment: .leading, spacing: 5) {
-                    Toggle(browser.name, isOn: Binding(
-                        get: { coordinator.isEnabled(browser) },
-                        set: { coordinator.setEnabled($0, for: browser) }
-                    ))
-                    .toggleStyle(.switch)
-                    .pointingHandCursor()
-                    .disabled(!coordinator.installedBrowsers.contains(browser) && !coordinator.isEnabled(browser))
-                    .accessibilityLabel("Track websites in \(browser.name)")
-                    Text(statusText(browser)).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    if coordinator.isEnabled(browser), needsRetry(coordinator.status(browser)) {
-                        Button("Retry \(browser.name) Access") { coordinator.retry(browser) }
-                            .buttonStyle(QuietButtonStyle())
-                    }
-                }
-                .padding(.vertical, 3)
+            Text(statusText)
+                .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if coordinator.isWebsiteTrackingEnabled && needsRetry {
+                Button("Retry access", action: coordinator.retryAccess)
+                    .buttonStyle(QuietButtonStyle())
             }
-            Text("If access is denied, times out, or the active tab has no HTTP(S) host, activity stays with the browser app. Each website starts unclassified, independently of its browser.")
+            Text("macOS may ask for Automation access when you use your default browser. Only HTTP(S) hostnames are saved; page titles, paths and searches are never recorded. If access is unavailable, time stays with the browser app.")
                 .foregroundStyle(.secondary).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             Button("Open Automation Settings", action: coordinator.openAutomationSettings)
                 .buttonStyle(QuietButtonStyle())
-            Text("Safari and installed Google Chrome, Microsoft Edge, Brave and Chromium are supported. Opt-ins stay on this Mac.")
+            Text("Website tracking supports Safari, Google Chrome, Microsoft Edge, Brave and Chromium as your default browser. Your choice stays on this Mac.")
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         .font(RatioTheme.font(size: 11))
-        .onAppear { coordinator.refreshAvailability() }
+        .onAppear { coordinator.refreshDefaultBrowser() }
     }
 
-    private func statusText(_ browser: SupportedBrowser) -> String {
-        guard coordinator.installedBrowsers.contains(browser) else { return "Not installed · application tracking only" }
-        switch coordinator.status(browser) {
+    private var statusText: String {
+        guard let browser = coordinator.defaultBrowser else {
+            return "Default browser not detected · application tracking continues"
+        }
+        guard coordinator.supportedDefaultBrowser != nil else {
+            return "Website tracking is unavailable for \(browser.name) · application tracking continues"
+        }
+        switch coordinator.status ?? .disabled {
         case .disabled: return "Off · application tracking only"
-        case .waiting: return "Enabled · bring this browser to the front to check access"
+        case .waiting: return "Enabled · bring \(browser.name) to the front to check access"
         case .checking: return "Checking website access · application tracking continues"
         case .tracking: return "Website access available · hostnames only"
-        case .denied: return "Access denied · application tracking continues. Allow this browser in Automation Settings, then retry."
+        case .denied: return "Access denied · allow \(browser.name) in Automation Settings, then retry"
         case .timedOut: return "Timed out or awaiting permission · application tracking continues"
-        case .unavailable: return "Website access unavailable · application tracking continues. Open a browser window to retry."
+        case .unavailable: return "Website access unavailable · open a browser window, then retry"
         case .unsupportedURL: return "This tab has no supported HTTP(S) host · application tracking continues"
         }
     }
 
-    private func needsRetry(_ status: WebsiteCaptureStatus) -> Bool {
-        status == .denied || status == .timedOut || status == .unavailable
+    private var needsRetry: Bool {
+        coordinator.status == .denied || coordinator.status == .timedOut || coordinator.status == .unavailable
     }
 }
