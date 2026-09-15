@@ -2,6 +2,8 @@
 
 Build a native macOS app using SwiftUI and AppKit. Keep the accounting domain independent of operating-system adapters and views. No webview, network service, analytics, or third-party dependencies are needed.
 
+The user's later design correction is authoritative: faithfully reproduce the compact menu bar panel in `docs/reference-panel.png`, not a large dashboard. All data and preferences remain local. See ticket06 and the refinement at the top of the spec.
+
 ## Agent skills
 
 ### Issue tracker
