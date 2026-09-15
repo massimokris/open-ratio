@@ -27,10 +27,11 @@ private struct BrowserSettingsContent: View {
             Text(statusText)
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if coordinator.isWebsiteTrackingEnabled && needsRetry {
-                Button("Retry access", action: coordinator.retryAccess)
+                Button(coordinator.status == .waiting && coordinator.accessSetupStatus == nil ? "Connect browser" : "Retry access",
+                       action: coordinator.retryAccess)
                     .buttonStyle(QuietButtonStyle())
             }
-            Text("macOS may ask for Automation access when you use your default browser. Only HTTP(S) hostnames are saved; page titles, paths and searches are never recorded. If access is unavailable, time stays with the browser app.")
+            Text("Turning this on opens your default browser and asks macOS for Automation access. Only HTTP(S) hostnames are saved; page titles, paths and searches are never recorded. If access is unavailable, time stays with the browser app.")
                 .foregroundStyle(.secondary).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             Button("Open Automation Settings", action: coordinator.openAutomationSettings)
                 .buttonStyle(QuietButtonStyle())
@@ -48,19 +49,31 @@ private struct BrowserSettingsContent: View {
         guard coordinator.supportedDefaultBrowser != nil else {
             return "Website tracking is unavailable for \(browser.name) · application tracking continues"
         }
+        if let setup = coordinator.accessSetupStatus {
+            switch setup {
+            case .opening: return "Opening \(browser.name)…"
+            case .requesting: return "Requesting access · respond to the macOS permission prompt"
+            case .denied: return "macOS denied access · allow \(browser.name) in Automation Settings, then retry"
+            case .failed: return "Could not open \(browser.name) or check access · retry to reconnect"
+            }
+        }
         switch coordinator.status ?? .disabled {
         case .disabled: return "Off · application tracking only"
-        case .waiting: return "Enabled · bring \(browser.name) to the front to check access"
+        case .waiting: return "Website tracking enabled for \(browser.name)"
         case .checking: return "Checking website access · application tracking continues"
         case .tracking: return "Website access available · hostnames only"
         case .denied: return "Access denied · allow \(browser.name) in Automation Settings, then retry"
         case .timedOut: return "Timed out or awaiting permission · application tracking continues"
-        case .unavailable: return "Website access unavailable · open a browser window, then retry"
+        case .unavailable: return "Website access unavailable · retry access to reconnect"
         case .unsupportedURL: return "This tab has no supported HTTP(S) host · application tracking continues"
         }
     }
 
     private var needsRetry: Bool {
-        coordinator.status == .denied || coordinator.status == .timedOut || coordinator.status == .unavailable
+        if let setup = coordinator.accessSetupStatus {
+            return setup == .denied || setup == .failed
+        }
+        return coordinator.status == .waiting || coordinator.status == .denied
+            || coordinator.status == .timedOut || coordinator.status == .unavailable
     }
 }

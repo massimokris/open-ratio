@@ -10,7 +10,7 @@ final class BrowserTrackingCoordinatorTests: XCTestCase {
         defaults.set(true, forKey: "websiteTracking.com.google.Chrome.enabled")
         let coordinator = BrowserTrackingCoordinator(defaults: defaults, defaultBrowserProvider: {
             DefaultBrowser(bundleIdentifier: "com.apple.Safari", name: "Safari")
-        })
+        }, access: GrantedBrowserAccessStub())
 
         XCTAssertFalse(coordinator.isWebsiteTrackingEnabled)
         XCTAssertEqual(coordinator.supportedDefaultBrowser, .safari)
@@ -18,7 +18,7 @@ final class BrowserTrackingCoordinatorTests: XCTestCase {
 
         let reopened = BrowserTrackingCoordinator(defaults: defaults, defaultBrowserProvider: {
             DefaultBrowser(bundleIdentifier: "com.google.Chrome", name: "Google Chrome")
-        })
+        }, access: GrantedBrowserAccessStub())
         XCTAssertFalse(reopened.isWebsiteTrackingEnabled)
     }
 
@@ -27,7 +27,7 @@ final class BrowserTrackingCoordinatorTests: XCTestCase {
         let defaults = try makeDefaults()
         defaults.set(true, forKey: "websiteTracking.com.apple.Safari.enabled")
         var defaultBrowser = DefaultBrowser(bundleIdentifier: "com.apple.Safari", name: "Safari")
-        let coordinator = BrowserTrackingCoordinator(defaults: defaults, defaultBrowserProvider: { defaultBrowser })
+        let coordinator = BrowserTrackingCoordinator(defaults: defaults, defaultBrowserProvider: { defaultBrowser }, access: GrantedBrowserAccessStub())
         XCTAssertTrue(coordinator.isWebsiteTrackingEnabled)
 
         defaultBrowser = DefaultBrowser(bundleIdentifier: "com.google.Chrome", name: "Google Chrome")
@@ -39,7 +39,7 @@ final class BrowserTrackingCoordinatorTests: XCTestCase {
         coordinator.setWebsiteTrackingEnabled(false)
         let reopened = BrowserTrackingCoordinator(defaults: defaults, defaultBrowserProvider: {
             DefaultBrowser(bundleIdentifier: "com.apple.Safari", name: "Safari")
-        })
+        }, access: GrantedBrowserAccessStub())
         XCTAssertFalse(reopened.isWebsiteTrackingEnabled)
         XCTAssertEqual(reopened.status, .disabled)
     }
@@ -54,7 +54,7 @@ final class BrowserTrackingCoordinatorTests: XCTestCase {
         let capture = BrowserCaptureStub()
         let coordinator = BrowserTrackingCoordinator(defaults: try makeDefaults(),
             defaultBrowserProvider: { defaultBrowser }, foregroundApplication: { foreground },
-            uptime: { uptime }, capture: capture)
+            uptime: { uptime }, capture: capture, access: GrantedBrowserAccessStub())
         coordinator.setWebsiteTrackingEnabled(true)
 
         XCTAssertEqual(coordinator.resolve(safari, fallingBackTo: safari.source), safari.source)
@@ -82,7 +82,7 @@ final class BrowserTrackingCoordinatorTests: XCTestCase {
         let capture = BrowserCaptureStub()
         let coordinator = BrowserTrackingCoordinator(defaults: try makeDefaults(), defaultBrowserProvider: {
             DefaultBrowser(bundleIdentifier: "com.apple.Safari", name: "Safari")
-        }, foregroundApplication: { foreground }, uptime: { 1000 }, capture: capture)
+        }, foregroundApplication: { foreground }, uptime: { 1000 }, capture: capture, access: GrantedBrowserAccessStub())
         coordinator.setWebsiteTrackingEnabled(true)
 
         for bundleIdentifier in ["com.google.Chrome", "com.microsoft.edgemac", "com.brave.Browser",
@@ -104,7 +104,7 @@ final class BrowserTrackingCoordinatorTests: XCTestCase {
         let capture = BrowserCaptureStub()
         let coordinator = BrowserTrackingCoordinator(defaults: try makeDefaults(),
             defaultBrowserProvider: { defaultBrowser }, foregroundApplication: { foreground },
-            uptime: { 1000 }, capture: capture)
+            uptime: { 1000 }, capture: capture, access: GrantedBrowserAccessStub())
         coordinator.setWebsiteTrackingEnabled(true)
 
         XCTAssertEqual(coordinator.defaultBrowser?.name, "Firefox")
@@ -133,7 +133,7 @@ final class BrowserTrackingCoordinatorTests: XCTestCase {
         let capture = BrowserCaptureStub()
         let coordinator = BrowserTrackingCoordinator(defaults: try makeDefaults(), defaultBrowserProvider: {
             DefaultBrowser(bundleIdentifier: "com.apple.Safari", name: "Safari")
-        }, foregroundApplication: { safari }, uptime: { uptime }, capture: capture)
+        }, foregroundApplication: { safari }, uptime: { uptime }, capture: capture, access: GrantedBrowserAccessStub())
 
         XCTAssertEqual(coordinator.resolve(safari, fallingBackTo: safari.source), safari.source)
         XCTAssertTrue(capture.requestedBrowsers.isEmpty)
@@ -167,7 +167,7 @@ final class BrowserTrackingCoordinatorTests: XCTestCase {
         let capture = BrowserCaptureStub()
         let coordinator = BrowserTrackingCoordinator(defaults: try makeDefaults(),
             defaultBrowserProvider: { defaultBrowser }, foregroundApplication: { chrome },
-            uptime: { 1000 }, capture: capture)
+            uptime: { 1000 }, capture: capture, access: GrantedBrowserAccessStub())
         coordinator.setWebsiteTrackingEnabled(true)
         coordinator.onChange = { [weak coordinator] in
             _ = coordinator?.resolve(chrome, fallingBackTo: chrome.source)
@@ -186,7 +186,7 @@ final class BrowserTrackingCoordinatorTests: XCTestCase {
         let capture = BrowserCaptureStub()
         let coordinator = BrowserTrackingCoordinator(defaults: try makeDefaults(), defaultBrowserProvider: {
             DefaultBrowser(bundleIdentifier: "com.apple.Safari", name: "Safari")
-        }, foregroundApplication: { safari }, uptime: { 1000 }, capture: capture)
+        }, foregroundApplication: { safari }, uptime: { 1000 }, capture: capture, access: GrantedBrowserAccessStub())
         coordinator.setWebsiteTrackingEnabled(true)
         _ = coordinator.resolve(safari, fallingBackTo: safari.source)
         capture.completeFirst(with: .denied)
@@ -254,4 +254,14 @@ private final class BrowserApplication: NSRunningApplication, @unchecked Sendabl
     override var processIdentifier: pid_t { suppliedProcessIdentifier }
     override var isTerminated: Bool { false }
     var source: ActivitySource { ActivitySource(id: "app." + suppliedBundleIdentifier, name: suppliedBundleIdentifier) }
+}
+
+/// Existing capture tests bypass setup without touching macOS applications or permissions.
+@MainActor
+private final class GrantedBrowserAccessStub: BrowserAccessRequesting {
+    func requestAccess(to browser: DefaultBrowser, requesting: @escaping @MainActor () -> Void,
+                       completion: @escaping @MainActor (BrowserAccessResult) -> Void) -> BrowserQueryControl {
+        completion(.granted)
+        return BrowserQueryControl()
+    }
 }

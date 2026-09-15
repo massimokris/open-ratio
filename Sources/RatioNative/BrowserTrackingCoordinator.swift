@@ -25,16 +25,17 @@ enum SupportedBrowser: String, CaseIterable, Identifiable {
 struct DefaultBrowser: Equatable {
     let bundleIdentifier: String
     let name: String
+    var applicationURL: URL? = nil
 }
 
-private func systemDefaultBrowser() -> DefaultBrowser? {
+func systemDefaultBrowser() -> DefaultBrowser? {
     guard let webURL = URL(string: "https://example.com"),
           let applicationURL = NSWorkspace.shared.urlForApplication(toOpen: webURL),
           let bundle = Bundle(url: applicationURL), let identifier = bundle.bundleIdentifier else { return nil }
     let name = bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
         ?? bundle.object(forInfoDictionaryKey: "CFBundleName") as? String
         ?? applicationURL.deletingPathExtension().lastPathComponent
-    return DefaultBrowser(bundleIdentifier: identifier, name: name)
+    return DefaultBrowser(bundleIdentifier: identifier, name: name, applicationURL: applicationURL)
 }
 
 /// Owns the local opt-in and native boundary; views see statuses, never a full URL.
@@ -48,6 +49,12 @@ final class BrowserTrackingCoordinator: ObservableObject {
     private let uptime: () -> TimeInterval
     private let capture: BrowserCapturing
     private var queryControl: BrowserQueryControl?
+    private let access: BrowserAccessRequesting
+    private var accessControl: BrowserQueryControl?
+    private var accessGeneration: UInt64 = 0
+    private var activeAccessGeneration: UInt64?
+    private var pendingAccessBrowser: DefaultBrowser?
+    @Published private(set) var accessSetupStatus: BrowserAccessSetupStatus?
     @Published private(set) var defaultBrowser: DefaultBrowser?
     @Published private(set) var isWebsiteTrackingEnabled: Bool
     var onChange: (() -> Void)?
@@ -56,12 +63,14 @@ final class BrowserTrackingCoordinator: ObservableObject {
          defaultBrowserProvider: @escaping () -> DefaultBrowser? = { systemDefaultBrowser() },
          foregroundApplication: @escaping () -> NSRunningApplication? = { NSWorkspace.shared.frontmostApplication },
          uptime: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
-         capture: BrowserCapturing? = nil) {
+         capture: BrowserCapturing? = nil,
+         access: BrowserAccessRequesting? = nil) {
         self.defaults = defaults
         self.defaultBrowserProvider = defaultBrowserProvider
         self.foregroundApplication = foregroundApplication
         self.uptime = uptime
         self.capture = capture ?? NativeBrowserCapture()
+        self.access = access ?? NativeBrowserAccess()
         let defaultBrowser = defaultBrowserProvider()
         self.defaultBrowser = defaultBrowser
         let supportedBrowser = defaultBrowser.flatMap { SupportedBrowser(rawValue: $0.bundleIdentifier) }
@@ -77,15 +86,24 @@ final class BrowserTrackingCoordinator: ObservableObject {
         defaultBrowser.flatMap { SupportedBrowser(rawValue: $0.bundleIdentifier) }
     }
     var status: WebsiteCaptureStatus? {
-        supportedDefaultBrowser.map { policy.status(for: $0.rawValue) }
+        guard let browser = supportedDefaultBrowser else { return nil }
+        switch accessSetupStatus {
+        case .opening, .requesting: return .checking
+        case .denied: return .denied
+        case .failed: return .unavailable
+        case nil: return policy.status(for: browser.rawValue)
+        }
     }
 
-    func refreshDefaultBrowser() {
+    func refreshDefaultBrowser() { refreshDefaultBrowser(notify: true) }
+
+    private func refreshDefaultBrowser(notify: Bool) {
         let detected = defaultBrowserProvider()
         guard detected != defaultBrowser else { return }
         let previousIdentifier = defaultBrowser?.bundleIdentifier
         defaultBrowser = detected
         if previousIdentifier != detected?.bundleIdentifier {
+            invalidateAccessSetup()
             queryControl?.cancel()
             for browser in policy.enabledBrowsers { policy.setEnabled(false, for: browser) }
             if isWebsiteTrackingEnabled, let browser = supportedDefaultBrowser {
@@ -93,7 +111,7 @@ final class BrowserTrackingCoordinator: ObservableObject {
             }
             policy.setForeground(nil)
         }
-        onChange?()
+        if notify { onChange?() }
     }
 
     func openAutomationSettings() {
@@ -109,22 +127,70 @@ final class BrowserTrackingCoordinator: ObservableObject {
         }
         objectWillChange.send()
         queryControl?.cancel()
+        invalidateAccessSetup()
         isWebsiteTrackingEnabled = enabled
-        if let browser = supportedDefaultBrowser { policy.setEnabled(enabled, for: browser.rawValue) }
         defaults.set(enabled, forKey: Self.preferenceKey)
-        // A default change can synchronously refresh tracking through onChange. Apply the
-        // user's choice first so an opt-out cannot start a capture for the new default.
-        refreshDefaultBrowser()
+        // Apply the user's choice before default detection can synchronously notify observers.
+        refreshDefaultBrowser(notify: false)
+        if let browser = supportedDefaultBrowser { policy.setEnabled(enabled, for: browser.rawValue) }
+        if enabled { beginAccessSetup() }
         onChange?()
     }
 
     func retryAccess() {
-        refreshDefaultBrowser()
-        guard let browser = supportedDefaultBrowser else { return }
-        objectWillChange.send()
-        queryControl?.cancel()
-        policy.retry(browser.rawValue)
+        refreshDefaultBrowser(notify: false)
+        guard isWebsiteTrackingEnabled else { return }
+        beginAccessSetup()
         onChange?()
+    }
+
+    private func invalidateAccessSetup() {
+        accessGeneration &+= 1
+        accessControl?.cancel()
+        pendingAccessBrowser = nil
+        accessSetupStatus = nil
+        // Keep activeAccessGeneration occupied until the native call actually returns.
+    }
+
+    private func beginAccessSetup() {
+        guard let browser = defaultBrowser, supportedDefaultBrowser != nil,
+              pendingAccessBrowser == nil, activeAccessGeneration != accessGeneration else { return }
+        queryControl?.cancel()
+        policy.retry(browser.bundleIdentifier)
+        pendingAccessBrowser = browser
+        accessSetupStatus = .opening
+        startPendingAccessSetup()
+    }
+
+    private func startPendingAccessSetup() {
+        guard queryControl == nil, activeAccessGeneration == nil,
+              let browser = pendingAccessBrowser else { return }
+        pendingAccessBrowser = nil
+        let generation = accessGeneration
+        activeAccessGeneration = generation
+        let control = access.requestAccess(to: browser, requesting: { [weak self] in
+            guard let self else { return }
+            self.refreshDefaultBrowser(notify: false)
+            guard self.accessGeneration == generation, self.isWebsiteTrackingEnabled else { return }
+            self.accessSetupStatus = .requesting
+        }, completion: { [weak self] result in
+            guard let self, self.activeAccessGeneration == generation else { return }
+            self.activeAccessGeneration = nil
+            self.accessControl = nil
+            self.refreshDefaultBrowser(notify: false)
+            if self.accessGeneration == generation, self.isWebsiteTrackingEnabled,
+               self.defaultBrowser?.bundleIdentifier == browser.bundleIdentifier {
+                switch result {
+                case .granted: self.accessSetupStatus = nil
+                case .denied: self.accessSetupStatus = .denied
+                case .failed: self.accessSetupStatus = .failed
+                }
+            }
+            self.startPendingAccessSetup()
+            self.onChange?()
+        })
+        // Test boundaries may complete immediately; never retain an already-finished control.
+        if activeAccessGeneration == generation { accessControl = control }
     }
 
     func foregroundChanged(_ application: NSRunningApplication?) {
@@ -143,7 +209,8 @@ final class BrowserTrackingCoordinator: ObservableObject {
     func resolve(_ application: NSRunningApplication, fallingBackTo source: ActivitySource) -> ActivitySource {
         foregroundChanged(application)
         let uptime = uptime()
-        if let request = policy.beginQuery(at: uptime), let browser = SupportedBrowser(rawValue: request.browser.bundleIdentifier) {
+        if activeAccessGeneration == nil, pendingAccessBrowser == nil, accessSetupStatus == nil,
+           let request = policy.beginQuery(at: uptime), let browser = SupportedBrowser(rawValue: request.browser.bundleIdentifier) {
             objectWillChange.send()
             let control = capture.capture(browser, processIdentifier: request.browser.processIdentifier) { [weak self] result in
                 guard let self else { return }
@@ -151,6 +218,7 @@ final class BrowserTrackingCoordinator: ObservableObject {
                 self.objectWillChange.send()
                 self.policy.complete(request, with: result, at: self.uptime())
                 self.queryControl = nil
+                self.startPendingAccessSetup()
                 self.onChange?()
             }
             queryControl = control
@@ -172,7 +240,7 @@ final class BrowserTrackingCoordinator: ObservableObject {
     var fallbackNotice: String? {
         guard let foreground = policy.foreground, policy.enabledBrowsers.contains(foreground.bundleIdentifier),
               let browser = SupportedBrowser(rawValue: foreground.bundleIdentifier) else { return nil }
-        switch policy.status(for: browser.rawValue) {
+        switch status ?? .disabled {
         case .disabled: return nil
         case .tracking:
             return policy.currentHost(at: uptime()) == nil
@@ -238,7 +306,9 @@ private enum BrowserAppleEvents {
         guard !control.isCancelled,
               systemDefaultBrowser()?.bundleIdentifier == browser.rawValue else { return .unavailable }
         do {
-            let reply = try event.sendEvent(options: [.waitForReply, .neverInteract], timeout: 2)
+            // Passive foreground sampling must not display consent. Enable/Retry owns that flow.
+            let noConsentPrompt = NSAppleEventDescriptor.SendOptions(rawValue: UInt(kAEDoNotPromptForUserConsent))
+            let reply = try event.sendEvent(options: [.waitForReply, .neverInteract, noConsentPrompt], timeout: 2)
             let error = reply.paramDescriptor(forKeyword: AEKeyword(keyErrorNumber))?.int32Value ?? 0
             guard error == 0 else { return failure(error) }
             // Neither native error text nor the raw URL escapes this function. Only a host can.
