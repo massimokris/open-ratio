@@ -4,18 +4,27 @@ import SwiftUI
 /// The entire primary product: eight rows on a 44-point grid.
 struct MenuBarView: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.colorScheme) private var colorScheme
     @State private var selectedHistoryDay: String?
     var showPreferences: () -> Void = {}
     var body: some View {
         VStack(spacing: 0) {
             RatioSummaryView(summary: model.summary)
-            statusRow
             Group {
-                if model.page == .history { HistoryView(selectedDay: $selectedHistoryDay) }
-                else { TodayView() }
+                if model.page == .preferences {
+                    PreferencesView()
+                } else {
+                    VStack(spacing: 0) {
+                        statusRow
+                        Group {
+                            if model.page == .history { HistoryView(selectedDay: $selectedHistoryDay) }
+                            else { TodayView() }
+                        }
+                        .frame(width: 360, height: 220)
+                        .clipped()
+                    }
+                }
             }
-            .frame(width: 360, height: 220)
+            .frame(width: 360, height: 264)
             .clipped()
             footer
         }
@@ -44,6 +53,7 @@ struct MenuBarView: View {
             }
             Button("Undo Reset", action: model.undoResetToday).disabled(!model.canUndoReset)
             Button("Export CSV…", action: model.exportActivityCSV)
+            Button("Show Data Folder", action: model.revealDataDirectory)
             Menu("Appearance") {
                 ForEach(AppModel.Appearance.allCases, id: \.self) { appearance in
                     Button(appearance.rawValue) { model.appearance = appearance }
@@ -185,23 +195,33 @@ struct MenuBarView: View {
             footerButton(width: 114, label: "Quit Ratio Native") {
                 NSApplication.shared.terminate(nil)
             } content: { Text("QUIT") }
-            footerButton(width: 44, label: "Switch appearance") {
-                model.appearance = colorScheme == .dark ? .light : .dark
+            footerButton(width: 44, label: model.page == .preferences ? "Show today's activity" : "Show settings",
+                         help: model.storageNotice) {
+                model.page = model.page == .preferences ? .today : .preferences
             } content: {
-                Image(systemName: colorScheme == .dark ? "sun.max" : "moon").font(.system(size: 13))
+                Image(systemName: "gearshape").font(.system(size: 13))
+                    .overlay(alignment: .topTrailing) {
+                        if model.storageNotice != nil {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.system(size: 7))
+                                .foregroundStyle(RatioTheme.unknown)
+                                .offset(x: 5, y: -4)
+                                .accessibilityHidden(true)
+                        }
+                    }
             }
         }
         .frame(height: 44)
         .overlay(alignment: .top) { Hairline() }
     }
-    private func footerButton<Content: View>(width: CGFloat, label: String, action: @escaping () -> Void,
+    private func footerButton<Content: View>(width: CGFloat, label: String, help: String? = nil, action: @escaping () -> Void,
                                             @ViewBuilder content: () -> Content) -> some View {
         Button(action: action) {
             content().frame(width: width, height: 44).contentShape(Rectangle())
         }
         .buttonStyle(FooterButtonStyle())
         .overlay(alignment: .trailing) { Rectangle().fill(RatioTheme.line).frame(width: 0.5) }
-        .help(label)
+        .help(help ?? label)
         .accessibilityLabel(label)
     }
 }

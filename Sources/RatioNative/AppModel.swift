@@ -7,8 +7,8 @@ final class AppModel: ObservableObject {
     enum Page: String, CaseIterable { case today = "Today", history = "History", preferences = "Preferences" }
     enum ActivityFilter: String, CaseIterable { case all = "All activity", unclassified = "Unclassified" }
     enum Appearance: String, CaseIterable {
-        case system = "System", light = "Light", dark = "Dark"
-        var colorScheme: ColorScheme? { self == .system ? nil : (self == .dark ? .dark : .light) }
+        case light = "Light", dark = "Dark"
+        var colorScheme: ColorScheme { self == .dark ? .dark : .light }
     }
     @Published var session = RatioSession()
     @Published var page: Page = .today
@@ -37,7 +37,11 @@ final class AppModel: ObservableObject {
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("RatioNative", isDirectory: true)
         activityStore = ActivityStore(directory: dataDirectory)
-        appearance = Appearance(rawValue: UserDefaults.standard.string(forKey: "appearance") ?? "System") ?? .system
+        let savedAppearance = UserDefaults.standard.string(forKey: "appearance")
+        // Resolve the legacy System choice once so every saved preference is Light or Dark.
+        appearance = savedAppearance.flatMap(Appearance.init(rawValue:))
+            ?? (NSApplication.shared.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light)
+        UserDefaults.standard.set(appearance.rawValue, forKey: "appearance")
         do {
             let loaded = try activityStore.load()
             session = RatioSession(liveLedger: loaded.ledger)

@@ -122,7 +122,7 @@ struct TourView: View {
             Button("Show Daily History") { model.page = .history }.buttonStyle(QuietButtonStyle())
             Text("Use the header’s back arrow to return from a day’s sources. The footer’s list button returns to today’s tracking.")
                 .foregroundStyle(.secondary).lineSpacing(4)
-            Text("Export retained days from Settings or the history context menu.")
+            Text("Export retained days from the panel or history context menu.")
                 .foregroundStyle(.secondary).lineSpacing(4)
         }
     }

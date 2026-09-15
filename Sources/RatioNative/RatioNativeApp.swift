@@ -6,7 +6,8 @@ import SwiftUI
 struct RatioNativeApp: App {
     @NSApplicationDelegateAdaptor(RatioAppDelegate.self) private var appDelegate
     var body: some Scene {
-        Settings { PreferencesView().environmentObject(appDelegate.model) }
+        // This scene hosts app commands; Settings actions open the existing native panel.
+        Settings { EmptyView() }
             .commands { RatioCommands(model: appDelegate.model, delegate: appDelegate) }
     }
 }
@@ -52,7 +53,6 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
     private var outsideClickMonitor: Any?
     private var localClickMonitor: Any?
     private var subscriptions = Set<AnyCancellable>()
-    private var preferencesWindow: NSWindow?
     private var tourWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -86,7 +86,6 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
         model.$appearance.sink { [weak self] appearance in
             guard let self else { return }
             self.panel?.appearance = Self.nativeAppearance(appearance)
-            self.preferencesWindow?.appearance = Self.nativeAppearance(appearance)
             self.tourWindow?.appearance = Self.nativeAppearance(appearance)
         }.store(in: &subscriptions)
         model.$tourPresented.removeDuplicates().sink { [weak self] presented in
@@ -100,8 +99,6 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if let tourWindow, tourWindow.isVisible {
             tourWindow.makeKeyAndOrderFront(nil)
-        } else if let preferencesWindow, preferencesWindow.isVisible {
-            preferencesWindow.makeKeyAndOrderFront(nil)
         } else if panel?.isVisible != true && !flag {
             showPanel()
         }
@@ -172,13 +169,8 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
         }
     }
     func showPreferences() {
-        closePanel()
-        if preferencesWindow == nil {
-            preferencesWindow = auxiliaryWindow(title: "Ratio Settings", size: NSSize(width: 450, height: 600),
-                                                 content: PreferencesView().environmentObject(model))
-        }
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        preferencesWindow?.makeKeyAndOrderFront(nil)
+        model.page = .preferences
+        showPanel()
     }
     private func showTourWindow() {
         closePanel()
@@ -238,7 +230,6 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
     }
     private static func nativeAppearance(_ appearance: AppModel.Appearance) -> NSAppearance? {
         switch appearance {
-        case .system: return nil
         case .light: return NSAppearance(named: .aqua)
         case .dark: return NSAppearance(named: .darkAqua)
         }

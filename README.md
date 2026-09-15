@@ -26,7 +26,7 @@ shasum -a 256 -c Ratio-Native-1.0.0-universal.dmg.sha256
 - **Ratio:** Create and Consume share classified time only. No classified time displays dashes. The tracked total includes unclassified time; the red badge opens that queue.
 - **Pause:** the left footer button pauses or resumes tracking. The clock button opens daily history; select a day to inspect its read-only source rows and use the header's back arrow to return. The footer's list button returns to today's tracking.
 - **RESET:** removes today's real durations and preserves categories and previous days. **Undo Reset** restores the most recent nonempty reset, including time tracked since it. Undo is held in memory during the current launch, so use it before quitting or performing another nonempty reset.
-- **Appearance:** the right footer button switches light/dark. Settings also offers System appearance.
+- **Settings:** the right footer gear opens settings in the same panel, below the ratio. Click it again to return to activity. Appearance switches between Light and Dark; Track websites enables website capture; Demo offers Try or Exit. Command-comma and Settings menu actions open this same page.
 - **QUIT:** stops the app and saves pending real activity.
 
 The closed menu-bar item shows `NN/NN`. Its icon and text follow the active source: green ↑ for Create, red ↓ for Consume, and white ? for unclassified. Paused tracking shows two white pause bars and white text.
@@ -39,17 +39,17 @@ System Settings, Finder, loginwindow and Ratio Native are excluded from new trac
 
 ### Demo and guidance
 
-**Try Demo** uses fictional activity stored separately in memory. **How It Works…** opens a five-step interactive guide with a compact demo panel. Demo mode is labeled **DEMO** in the panel and **D** in the menu bar. You can change demo sources and categories, pause, inspect fictional history and reset it. Real tracking is suspended during demo, and real activity and pause state are preserved. **Exit Demo**, **Close Tour** or **Finish** returns to real activity; resetting the demo never erases real history.
+**Try** in the settings Demo row uses fictional activity stored separately in memory. The row becomes **Exit** while the demo is active. **How It Works…** opens a five-step interactive guide with a compact demo panel. Demo mode is labeled **DEMO** in the panel and **D** in the menu bar. You can change demo sources and categories, pause, inspect fictional history and reset it. Real tracking is suspended during demo, and real activity and pause state are preserved. **Exit Demo**, **Close Tour** or **Finish** returns to real activity; resetting the demo never erases real history.
 
 ### Optional websites and permissions
 
-Settings has one **Track websites** switch, with the name of your macOS default browser. When enabled, only that browser tracks individual websites. Other browsers each count as one application—for example, with Brave as default, Safari activity stays under Safari. Website tracking supports Safari, Google Chrome, Microsoft Edge, Brave and Chromium as the default browser; unsupported or undetected defaults use app tracking.
+Settings has one **Track websites** control. Its help and context menu identify your macOS default browser and access status. When enabled, only that browser tracks individual websites. Other browsers each count as one application—for example, with Brave as default, Safari activity stays under Safari. Website tracking supports Safari, Google Chrome, Microsoft Edge, Brave and Chromium as the default browser; unsupported or undetected defaults use app tracking.
 
-The switch starts **off** for new installations. Upgrades inherit only the current default browser's previous opt-in. Turning it on opens your default browser and immediately requests **Automation** permission from macOS if needed. Connect browser / Retry access performs the same setup, with opening and permission status shown in Settings. The setting follows later changes to your macOS default browser, clearing cached website activity from the old browser.
+The switch starts **off** for new installations. Upgrades inherit only the current default browser's previous opt-in. Turning it on opens your default browser and immediately requests **Automation** permission from macOS if needed. The website row’s context menu offers Connect browser / Retry access for the same setup. Its help and context menu report opening and permission status. The setting follows later changes to your macOS default browser, clearing cached website activity from the old browser.
 
 Only HTTP(S) **hostnames** are retained: for example, `https://www.example.com/private?q=secret` becomes `example.com`. Paths, searches, fragments, credentials and page titles are not stored. Each website has its own initially unclassified category; it does not inherit the browser's category. Background tracking never launches a browser; opening happens only after an explicit enable, connect or retry action.
 
-Denied access, missing tabs, unsupported URLs and timeouts fall back to app tracking. Read the status help or Settings for the reason. To retry, allow the default browser in **System Settings → Privacy & Security → Automation**, then select **Retry access** in Ratio's Settings or turn Track websites off/on. App tracking requires no Accessibility permission, and website tracking requires no browser JavaScript setting. See [website verification](docs/qa/website-tracking.md) for the supported contract and test scope. Actual browser consent grants are not claimed by the automated tests.
+Denied access, missing tabs, unsupported URLs and timeouts fall back to app tracking. Read the status help or Settings for the reason. To retry, allow the default browser in **System Settings → Privacy & Security → Automation**, then right-click the Track websites row and select **Retry access**, or turn Track websites off/on. App tracking requires no Accessibility permission, and website tracking requires no browser JavaScript setting. See [website verification](docs/qa/website-tracking.md) for the supported contract and test scope. Actual browser consent grants are not claimed by the automated tests.
 
 ## Local data, recovery and export
 
@@ -61,9 +61,9 @@ Denied access, missing tabs, unsupported URLs and timeouts fall back to app trac
 | Appearance and website-tracking preference | macOS UserDefaults domain `com.rationative.RatioNative`, normally `~/Library/Preferences/com.rationative.RatioNative.plist` |
 | CSV export | A local location you choose in the Save dialog |
 
-Settings has **Show Data Folder**. JSON writes are atomic and retain a previous valid snapshot. Storage errors appear in the panel status and Settings; unreadable originals are preserved. If the app cannot load safely, new activity stays in memory until you fix the reported problem and reopen it. If saving fails, it retains new activity in memory and retries. Copy the entire data folder while the app is quit before manually repairing files; keep any corrupt originals. An unsupported newer schema is left unchanged and requires a compatible app version.
+The panel context menu has **Show Data Folder**. JSON writes are atomic and retain a previous valid snapshot. Storage errors appear in the panel status help; unreadable originals are preserved. If the app cannot load safely, new activity stays in memory until you fix the reported problem and reopen it. If saving fails, it retains new activity in memory and retries. Copy the entire data folder while the app is quit before manually repairing files; keep any corrupt originals. An unsupported newer schema is left unchanged and requires a compatible app version.
 
-**Export CSV…** is available in Settings and the panel/history context menu. It exports retained days, source names, current categories and seconds. In demo mode it exports only the labeled fictional dataset; leave demo to export real activity. The export is local and does not change activity.
+**Export CSV…** remains available in the panel/history context menu; the settings page has no export or guide buttons. It exports retained days, source names, current categories and seconds. In demo mode it exports only the labeled fictional dataset; leave demo to export real activity. The export is local and does not change activity.
 
 ## Build and test
 
@@ -100,11 +100,11 @@ For an isolated development dataset, launch the executable with `RATIO_NATIVE_DA
 
 ## Troubleshooting
 
-- **Cannot see the app:** find the ratio in the menu bar and click it. Open the app again from Applications to reveal its panel or existing Settings/guide window. Right-click the ratio to quit.
+- **Cannot see the app:** find the ratio in the menu bar and click it. Open the app again from Applications to reveal its panel or existing guide window. Right-click the ratio to quit.
 - **No ratio yet:** unknown apps begin unclassified. Select ↑ or ↓; no time or category is invented for a new real dataset.
 - **Time stopped advancing:** check Pause, demo mode, input inactivity and session sleep. No activity is reconstructed for time when the app was not running.
 - **Website shown as its browser:** only the default browser tracks individual websites. Check Track websites and the reason in Settings, then use Connect browser / Retry access if needed. App tracking continues without website access.
-- **Storage error:** open Settings, read the exact path and recovery message, and check access/free space. Keep the original and backup files. Resolve load problems and restart before relying on new in-memory activity being durable.
+- **Storage error:** read the panel’s status help, use **Show Data Folder** in its context menu, and check access/free space. Keep the original and backup files. Resolve load problems and restart before relying on new in-memory activity being durable.
 - **Image is busy during verification/ejection:** close Finder windows or processes using the mounted image, then eject it normally. The verifier prints the remaining mount path if detach fails; it never forces detachment.
 - **Build tools missing or wrong compiler:** inspect `xcode-select -p` and `swift --version`, then select an installed compatible Xcode/Command Line Tools installation. Developer ID signing additionally needs your own valid identity in the keychain.
 
@@ -114,7 +114,7 @@ The delivered artifact has **not** been submitted to Apple. Apple Development id
 
 ## Project and evidence
 
-All 34 accounting, persistence, history, demo and website tests pass. The final DMG was mounted, its app copied out and launched on the available Mac; the compact live panel, advancing activity and pause behavior were checked. Runtime and browser-permission limits are recorded in the linked evidence.
+All 51 accounting, persistence, history, demo and native/browser tests pass. The final DMG was mounted, its app copied out and launched on the available Mac; the compact live panel, advancing activity and pause behavior were checked. Runtime and browser-permission limits are recorded in the linked evidence.
 
 - [Accounting vocabulary](CONTEXT.md) and [architecture decisions](docs/adr/)
 - [Authoritative specification](.scratch/ratio-native/spec.md) and [implementation tickets](.scratch/ratio-native/issues/)

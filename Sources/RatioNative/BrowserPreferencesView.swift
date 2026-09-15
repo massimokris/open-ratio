@@ -12,34 +12,34 @@ private struct BrowserSettingsContent: View {
     @ObservedObject var coordinator: BrowserTrackingCoordinator
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Eyebrow(text: "Website activity")
-            Toggle("Track websites", isOn: Binding(
-                get: { coordinator.isWebsiteTrackingEnabled },
-                set: { coordinator.setWebsiteTrackingEnabled($0) }
-            ))
-            .toggleStyle(.switch)
-            .pointingHandCursor()
-            Text("Default browser: \(coordinator.defaultBrowser?.name ?? "Not detected")")
-                .font(RatioTheme.font(size: 13))
-            Text("Only your default browser tracks individual websites. Other browsers are tracked as apps. This follows changes to your default browser in macOS.")
-                .foregroundStyle(.secondary).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+        PreferenceRow(title: "Track websites") {
+            Button {
+                coordinator.setWebsiteTrackingEnabled(!coordinator.isWebsiteTrackingEnabled)
+            } label: {
+                Text(coordinator.isWebsiteTrackingEnabled ? "On" : "Off")
+                    .frame(width: 88, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PanelButtonStyle())
+            .accessibilityLabel("Track websites")
+            .accessibilityValue(coordinator.isWebsiteTrackingEnabled ? "On" : "Off")
+        }
+        .help("\(defaultBrowserText)\n\(statusText)\nTurning this on opens the supported default browser and requests Automation access. Only hostnames are saved; other browsers stay tracked as apps. Right-click for access options.")
+        .contextMenu {
+            Text(defaultBrowserText)
             Text(statusText)
-                .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Divider()
             if coordinator.isWebsiteTrackingEnabled && needsRetry {
                 Button(coordinator.status == .waiting && coordinator.accessSetupStatus == nil ? "Connect browser" : "Retry access",
                        action: coordinator.retryAccess)
-                    .buttonStyle(QuietButtonStyle())
             }
-            Text("Turning this on opens your default browser and asks macOS for Automation access. Only HTTP(S) hostnames are saved; page titles, paths and searches are never recorded. If access is unavailable, time stays with the browser app.")
-                .foregroundStyle(.secondary).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             Button("Open Automation Settings", action: coordinator.openAutomationSettings)
-                .buttonStyle(QuietButtonStyle())
-            Text("Website tracking supports Safari, Google Chrome, Microsoft Edge, Brave and Chromium as your default browser. Your choice stays on this Mac.")
-                .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
-        .font(RatioTheme.font(size: 11))
         .onAppear { coordinator.refreshDefaultBrowser() }
+    }
+
+    private var defaultBrowserText: String {
+        "Default browser: \(coordinator.defaultBrowser?.name ?? "Not detected")"
     }
 
     private var statusText: String {
