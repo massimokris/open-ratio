@@ -5,9 +5,9 @@ import RatioCore
 enum MenuIndicator {
     static func image(category: ActivityCategory?, paused: Bool) -> NSImage {
         let color: NSColor
-        if paused || category == nil { color = NSColor(srgbRed: 0.78, green: 0.61, blue: 0.30, alpha: 1) }
-        else if category == .create { color = NSColor(srgbRed: 0.38, green: 0.69, blue: 0.45, alpha: 1) }
-        else { color = NSColor(srgbRed: 0.83, green: 0.40, blue: 0.34, alpha: 1) }
+        if paused || category == nil { color = NSColor(srgbRed: 1, green: 0.69, blue: 0, alpha: 1) }
+        else if category == .create { color = NSColor(srgbRed: 40 / 255, green: 205 / 255, blue: 65 / 255, alpha: 1) }
+        else { color = NSColor(srgbRed: 1, green: 59 / 255, blue: 48 / 255, alpha: 1) }
         let image = NSImage(size: NSSize(width: 16, height: 16), flipped: false) { _ in
             color.setStroke()
             let outline = NSBezierPath(ovalIn: NSRect(x: 0.75, y: 0.75, width: 14.5, height: 14.5))
