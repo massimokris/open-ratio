@@ -2,13 +2,17 @@
 
 A macOS menu bar app for noticing the balance between **Create** and **Consume**. There is no webview, network service, account, analytics or third-party dependency.
 
-This is an independent implementation inspired by [Ratio by Jack Butcher](https://x.com/jackbutcher/status/2099526332178629044). Is not the original source, an official distribution or an endorsed product. No proprietary executable or source was downloaded or reverse engineered.
+Download it [here](https://github.com/massimokris/open-ratio/releases/download/v1/Open-Ratio-1.0.0-universal.dmg) for free.
+
+> This is an independent implementation inspired by [Ratio by Jack Butcher](https://x.com/jackbutcher/status/2099526332178629044). Is not the original source, an official distribution or an endorsed product. No proprietary executable or source was downloaded or reverse engineered.
+
+![Demo](demo.gif)
 
 ## Install
 
 Requires **macOS 13 or later**. The packaged app supports Apple Silicon and Intel Macs.
 
-1. Open `Open-Ratio-1.0.0-universal.dmg`.
+1. Open the latest `.dmg` file.
 2. Drag **Open Ratio** into the **Applications** folder.
 3. Eject the disk image and open **Open Ratio** from Applications.
 
@@ -18,13 +22,9 @@ Click the ratio in the menu bar to open the panel. To build the DMG yourself, us
 
 App tracking works without extra permissions.
 
-- **Automation (optional)** — lets Open Ratio read the active tab address in your default browser when you enable website tracking.
+**Automation (optional to Track Websites)** — lets Open Ratio read the active tab address in your default browser when you enable website tracking. It starts off. Safari, Chrome, Edge, Brave and Chromium are supported. Open Ratio saves only the hostname, such as `example.com`. Other browsers count as apps. If a site cannot be read or access is denied, tracking continues under the browser’s app name.
 
 You can manage this access in **System Settings → Privacy & Security → Automation**.
-
-## Optional websites
-
-Turn on **Track websites** in Settings to track sites in your default browser. It starts off. Safari, Chrome, Edge, Brave and Chromium are supported. Turning it on opens your browser and asks for Automation access. Open Ratio saves only the hostname, such as `example.com`. Other browsers count as apps. If a site cannot be read or access is denied, tracking continues under the browser’s app name.
 
 ## Architecture
 
