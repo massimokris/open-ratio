@@ -63,7 +63,7 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
         item.button?.action = #selector(statusItemClicked(_:))
         item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         let panel = RatioPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 360),
-                               styleMask: [.borderless], backing: .buffered, defer: false)
+                               styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.title = "Ratio"
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .clear
@@ -91,7 +91,13 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if panel?.isVisible != true && !flag { showPanel() }
+        if let tourWindow, tourWindow.isVisible {
+            tourWindow.makeKeyAndOrderFront(nil)
+        } else if let preferencesWindow, preferencesWindow.isVisible {
+            preferencesWindow.makeKeyAndOrderFront(nil)
+        } else if panel?.isVisible != true && !flag {
+            showPanel()
+        }
         return false
     }
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
@@ -106,7 +112,6 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
     }
     func showPanel() {
         if let panel, panel.isVisible {
-            NSApplication.shared.activate(ignoringOtherApps: true)
             panel.makeKeyAndOrderFront(nil)
             return
         }
@@ -120,7 +125,6 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
                 .environmentObject(model))
         panel.appearance = Self.nativeAppearance(model.appearance)
         panel.setFrame(NSRect(x: left, y: anchor.minY - 360, width: 360, height: 360), display: true)
-        NSApplication.shared.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         installDismissalMonitors()
         captureReferenceIfRequested()

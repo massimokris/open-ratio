@@ -56,6 +56,7 @@ struct PreferencesView: View {
                 Text("Ratio Native 1.0 · macOS 13+").font(RatioTheme.font(size: 9)).foregroundStyle(.secondary)
             }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(width: 450, height: 600)
         .font(RatioTheme.font(size: 11))
         .foregroundStyle(RatioTheme.text)
         .background(RatioTheme.background)
