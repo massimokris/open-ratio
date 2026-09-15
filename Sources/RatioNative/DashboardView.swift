@@ -4,7 +4,7 @@ struct DashboardView: View {
     @EnvironmentObject private var model: AppModel
     var body: some View {
         HStack(spacing: 0) {
-            sidebar.frame(width: 172)
+            sidebar.frame(width: 184)
             Rectangle().fill(RatioTheme.line).frame(width: 1)
             VStack(spacing: 0) {
                 topBar
@@ -34,7 +34,7 @@ struct DashboardView: View {
                     HStack(spacing: 10) {
                         Image(systemName: page == .today ? "circle.lefthalf.filled" : page == .history ? "clock" : "slider.horizontal.3")
                             .frame(width: 15)
-                        Text(page.rawValue)
+                        Text(page.rawValue).lineLimit(1)
                         Spacer()
                         if model.page == page { Rectangle().fill(RatioTheme.create).frame(width: 3, height: 15) }
                     }.font(.system(size: 11, weight: model.page == page ? .semibold : .regular, design: .monospaced))
