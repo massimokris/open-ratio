@@ -4,126 +4,60 @@ A local macOS menu bar app for noticing the balance between **Create** and **Con
 
 ## Install
 
-1. Open `dist/Open-Ratio-1.0.0-universal.dmg`.
-2. Drag **Open Ratio.app** to the **Applications** shortcut.
-3. Eject the image and open **Open Ratio** from Applications. The panel opens at launch.
-4. Click the ratio in the menu bar to reopen or close the panel. **Right-click the menu bar ratio** for **Settings…**, **Try Demo**, **Undo Reset** and **Quit Open Ratio**. The app does not show a Dock icon.
+Requires **macOS 13 or later**. The packaged app supports Apple Silicon and Intel Macs.
 
-The app targets **macOS 13 or later** and contains both **arm64** and **x86_64** release code. Native runtime verification is limited to the available Apple Silicon Mac running macOS **26.5.2**; Intel hardware and macOS 13 have not been runtime-tested.
+1. Open `Open-Ratio-1.0.0-universal.dmg`.
+2. Drag **Open Ratio** into the **Applications** folder.
+3. Eject the disk image and open **Open Ratio** from Applications.
 
-The supplied local build is **ad-hoc signed with hardened runtime and is not notarized**. A valid ad-hoc signature verifies integrity but does not establish a Developer ID. If macOS blocks a downloaded copy you trust, attempt to open it, then use its **Open Anyway** entry under **System Settings → Privacy & Security**, as described by [Apple](https://support.apple.com/en-gb/102445). Managed Macs may restrict this action. The build/install scripts do not change macOS security settings or remove quarantine attributes.
+Click the ratio in the menu bar to open the panel. To build the DMG yourself, use the commands under [Contributing](#contributing).
 
-To check the downloaded image against its adjacent checksum file:
+## Permissions the app needs
 
-```sh
-cd dist
-shasum -a 256 -c Open-Ratio-1.0.0-universal.dmg.sha256
+App tracking works without extra permissions.
+
+- **Automation (optional)** — lets Open Ratio read the active tab address in your default browser when you enable website tracking.
+
+You can manage this access in **System Settings → Privacy & Security → Automation**.
+
+## Optional websites
+
+Turn on **Track websites** in Settings to track sites in your default browser. It starts off. Safari, Chrome, Edge, Brave and Chromium are supported. Turning it on opens your browser and asks for Automation access. Open Ratio saves only the hostname, such as `example.com`. Other browsers count as apps. If a site cannot be read or access is denied, tracking continues under the browser’s app name.
+
+## Architecture
+
+**Native menu bar app** with no Dock icon. AppKit manages the menu bar item and the main `NSPanel`; SwiftUI shows tracking, history and settings inside it. `NSWorkspace` detects the active app, while `RatioCore` calculates tracked time and ratios. Optional website tracking reads the default browser through Apple Events. Activity is saved as JSON in `~/Library/Application Support/RatioNative/`, and preferences use `UserDefaults`. Demo data stays separate from real activity.
+
+See [CONTEXT.md](CONTEXT.md) for domain terms and [docs/adr/](docs/adr/) for design decisions.
+
+## Project structure
+
+```text
+Sources/
+  RatioNative/          # Menu bar UI, app state and macOS/browser access
+  RatioCore/            # Time tracking, ratios, history and local storage
+Tests/
+  RatioNativeTests/     # App and browser adapter tests
+  RatioCoreTests/       # Accounting and storage tests
+Resources/              # App icon, bundle metadata and permissions
+scripts/                # Build the app, create the DMG and verify releases
+docs/adr/               # Design decisions
+Package.swift           # Swift package and build targets
+CONTEXT.md              # Domain terms
+AGENTS.md               # Instructions for coding agents
+LICENSE                 # MIT license
 ```
 
-## Use the panel
+## Contributing
 
-- **↑ Create / ↓ Consume:** classify an app or website using its row controls. Choices apply to its retained time, including previous days. Right-click a source row to make it unclassified again.
-- **Ratio:** Create and Consume share classified time only. No classified time displays dashes. The tracked total includes unclassified time; the red badge opens that queue.
-- **Pause:** the left footer button pauses or resumes tracking. The clock button opens daily history; select a day to inspect its read-only source rows and use the header's back arrow to return. The footer's list button returns to today's tracking.
-- **RESET:** removes today's real durations and preserves categories and previous days. **Undo Reset** restores the most recent nonempty reset, including time tracked since it. Undo is held in memory during the current launch, so use it before quitting or performing another nonempty reset.
-- **Settings:** the right footer gear opens settings in the same panel, below the ratio. Click it again to return to activity. Appearance shows a sun to switch to Light and a moon to switch to Dark; Track websites enables website capture; Demo offers Try or Exit. Command-comma and Settings menu actions open this same page.
-- **QUIT:** stops the app and saves pending real activity.
+PRs welcome. If you use Codex or Claude Code, point it at [AGENTS.md](AGENTS.md) and describe what you want to build.
 
-The closed menu-bar item shows `NN/NN`. Its icon and text follow the active source: green ↑ for Create, red ↓ for Consume, and white ? for unclassified. Paused tracking shows two white pause bars and white text.
-
-The compact panel and menu-bar ratio use SF Mono at 12 points with 0.4 points of added letter spacing and an 18-point line height. The text symbols `✓`, `↑`, `↓` and `?` use Menlo Regular at 12 points for their compact glyph shapes; the menu-bar symbols and activity-row arrows share this styling. Only the five bottom-bar buttons show a white background with dark labels on hover. The completed-classification `✓` button has a white background while its view is open and returns to its normal appearance when closed.
-
-Foreground activity counts automatically while the app runs. The first five minutes without input count as an idle grace for reading. Sleep, an inactive session and unexplained gaps over ten seconds are excluded; the app never fills time while it was closed. Days use the local date when time was recorded and keep that date after timezone changes.
-
-System Settings, Finder, loginwindow and Open Ratio are excluded from new tracking. Time spent in those apps is not attributed to the previous app; tracking resumes when another app becomes active. Existing history and categories are retained.
-
-### Demo
-
-**Try** in the settings Demo row uses fictional activity stored separately in memory. The row becomes **Exit** while the demo is active. Demo mode is labeled **DEMO** in the panel and **D** in the menu bar. You can change demo sources and categories, pause, inspect fictional history and reset it. Real tracking is suspended during demo, and real activity and pause state are preserved. **Exit Demo** returns to real activity; resetting the demo never erases real history.
-
-### Optional websites and permissions
-
-Settings has one **Track websites** control. Its help and context menu identify your macOS default browser and access status. When enabled, only that browser tracks individual websites. Other browsers each count as one application—for example, with Brave as default, Safari activity stays under Safari. Website tracking supports Safari, Google Chrome, Microsoft Edge, Brave and Chromium as the default browser; unsupported or undetected defaults use app tracking.
-
-The switch starts **off** for new installations. Upgrades inherit only the current default browser's previous opt-in. Turning it on opens your default browser and immediately requests **Automation** permission from macOS if needed. The website row’s context menu offers Connect browser / Retry access for the same setup. Its help and context menu report opening and permission status. The setting follows later changes to your macOS default browser, clearing cached website activity from the old browser.
-
-Only HTTP(S) **hostnames** are retained: for example, `https://www.example.com/private?q=secret` becomes `example.com`. Paths, searches, fragments, credentials and page titles are not stored. Each website has its own initially unclassified category; it does not inherit the browser's category. Background tracking never launches a browser; opening happens only after an explicit enable, connect or retry action.
-
-Denied access, missing tabs, unsupported URLs and timeouts fall back to app tracking. Read the status help or Settings for the reason. To retry, allow the default browser in **System Settings → Privacy & Security → Automation**, then right-click the Track websites row and select **Retry access**, or turn Track websites off/on. App tracking requires no Accessibility permission, and website tracking requires no browser JavaScript setting. Actual browser consent grants are not claimed by the automated tests.
-
-## Local data, recovery and export
-
-| Data | Location |
-| --- | --- |
-| Real daily activity and remembered categories | `~/Library/Application Support/RatioNative/activity.json` |
-| Last valid saved snapshot | `~/Library/Application Support/RatioNative/activity-backup.json` |
-| Preserved unreadable originals, if recovery was needed | `~/Library/Application Support/RatioNative/activity-corrupt-<UUID>.json` |
-| Appearance and website-tracking preference | macOS UserDefaults domain `com.rationative.RatioNative`, normally `~/Library/Preferences/com.rationative.RatioNative.plist` |
-| CSV export | A local location you choose in the Save dialog |
-
-Open Ratio keeps the existing data folder and preference domain so your saved history and settings remain available.
-
-The panel context menu has **Show Data Folder**. JSON writes are atomic and retain a previous valid snapshot. Storage errors appear in the panel status help; unreadable originals are preserved. If the app cannot load safely, new activity stays in memory until you fix the reported problem and reopen it. If saving fails, it retains new activity in memory and retries. Copy the entire data folder while the app is quit before manually repairing files; keep any corrupt originals. An unsupported newer schema is left unchanged and requires a compatible app version.
-
-**Export CSV…** remains available in the panel/history context menu; the settings page has no export button. It exports retained days, source names, current categories and seconds. In demo mode it exports only the labeled fictional dataset; leave demo to export real activity. The export is local and does not change activity.
-
-## Build and test
-
-Prerequisites: a Mac, Xcode or Apple Command Line Tools with a macOS SDK, and **Swift 5.9 or later**. The release was built with **Swift 6.2.4** and Xcode's macOS SDK. Swift Package Manager is the project entry point; no downloaded packages are required. If development tools are absent, install them with `xcode-select --install` or install Xcode and complete its first-run setup.
-
-Run from the repository root:
+For local development, install Xcode or the Command Line Tools with Swift 5.9 or later, then run:
 
 ```sh
 swift build
 swift test
-./scripts/build.sh
 ./scripts/package-dmg.sh
 ```
 
-`build.sh` compiles optimized arm64 and x86_64 executables with explicit macOS 13.0 targets in separate `build/swiftpm-<architecture>` scratch directories, combines them with `lipo`, supplies the original icon and bundle metadata, and signs with the browser Automation entitlement. It verifies each architecture before replacing `dist/Open Ratio.app`.
-
-`package-dmg.sh` builds again by default so it packages current source. It creates a compressed DMG with a compact Finder window: Open Ratio on the left, Applications on the right, and a drag-to-install instruction between them. Native Swift helpers draw the hidden background and save the window layout on a temporary writable image before compression. It verifies the final image, then writes a SHA-256 file. To package an already verified app without rebuilding (for example, a notarized app), run:
-
-```sh
-./scripts/package-dmg.sh --skip-build
-./scripts/verify-release.sh --app 'dist/Open Ratio.app'
-./scripts/verify-release.sh --dmg 'dist/Open-Ratio-1.0.0-universal.dmg'
-open 'dist/Open Ratio.app'
-```
-
-The verifier checks both architectures, macOS minimum version, menu bar bundle metadata, app icon presence, strict code signatures, hardened runtime and the Apple-events entitlement. For DMGs it also checks image integrity, read-only mounting, the saved Finder layout/background and the Applications symlink, then detaches normally. It does not launch the app or claim Gatekeeper/notarization acceptance. Build outputs in `build/`, `.build/` and `dist/` are ignored by Git. To regenerate the original icon:
-
-```sh
-swift scripts/generate-icon.swift 'build/RatioNative.iconset'
-iconutil -c icns 'build/RatioNative.iconset' -o 'Resources/AppIcon.icns'
-```
-
-For an isolated development dataset, launch the executable with `RATIO_NATIVE_DATA_DIR` set to a temporary directory. This overrides activity JSON only; standard appearance and browser preferences still use UserDefaults. `--demo` starts the interactive demo; `--reference-demo` is a frozen visual-QA fixture. Do not mistake the fixture for tracked real activity.
-
-## Troubleshooting
-
-- **Cannot see the app:** find the ratio in the menu bar and click it. Open the app again from Applications to reveal its panel. Right-click the ratio to quit.
-- **No ratio yet:** unknown apps begin unclassified. Select ↑ or ↓; no time or category is invented for a new real dataset.
-- **Time stopped advancing:** check Pause, demo mode, input inactivity and session sleep. No activity is reconstructed for time when the app was not running.
-- **Website shown as its browser:** only the default browser tracks individual websites. Check Track websites and the reason in Settings, then use Connect browser / Retry access if needed. App tracking continues without website access.
-- **Storage error:** read the panel’s status help, use **Show Data Folder** in its context menu, and check access/free space. Keep the original and backup files. Resolve load problems and restart before relying on new in-memory activity being durable.
-- **Image is busy during verification/ejection:** close Finder windows or processes using the mounted image, then eject it normally. The verifier prints the remaining mount path if detach fails; it never forces detachment.
-- **Build tools missing or wrong compiler:** inspect `xcode-select -p` and `swift --version`, then select an installed compatible Xcode/Command Line Tools installation. Developer ID signing additionally needs your own valid identity in the keychain.
-
-## Optional public signing and notarization
-
-The delivered artifact has **not** been submitted to Apple. Apple Development identities are not a substitute for a **Developer ID Application** identity. The default scripts never submit anything for notarization. The optional owner-operated signing workflow is retained locally in the untracked `docs/build.md` notes.
-
-## Project and evidence
-
-All 51 accounting, persistence, history, demo and native/browser tests pass. The final DMG was mounted, its app copied out and launched on the available Mac; the compact live panel, advancing activity and pause behavior were checked. Detailed build, review, QA and reference records are kept locally and excluded from Git.
-
-- [Accounting vocabulary](CONTEXT.md) and [architecture decisions](docs/adr/)
-- Local specification and implementation tickets live in `.scratch/ratio-native/` and are intentionally excluded from Git.
-- `Sources/RatioCore`: deterministic accounting, history, CSV, persistence and hostname policy
-- `Sources/RatioNative`: AppKit/SwiftUI panel, foreground adapters, optional browser Automation and preferences
-- `Tests/RatioCoreTests`: concrete accounting timelines and public persistence/browser behavior
-
-### Reference attribution
-
-This is an independent implementation inspired by [Ratio by Visualize Value](https://ratio.visualizevalue.com/) and its publicly observable interactions. It is not the original source, an official distribution or an endorsed product. The supplied screenshot is retained as a design reference; the executable's app icon was created in this repository. No proprietary executable or source was downloaded or reverse engineered.
+The packaging script creates `dist/Open Ratio.app` and `dist/Open-Ratio-1.0.0-universal.dmg`. Keep time accounting separate from the UI and macOS adapters, and use system frameworks.
