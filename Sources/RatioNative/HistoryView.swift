@@ -68,6 +68,7 @@ private struct HistoryDayRow: View {
     var body: some View {
         HStack(spacing: 16) {
             Text(showsDirection ? directionSymbol : HistoryFormatting.dateLabel(for: day.day))
+                .font(showsDirection ? Font(RatioTypography.glyphFont()) : RatioTheme.font())
                 .foregroundStyle(showsDirection ? ratioColor : RatioTheme.secondary)
                 .frame(width: 58, alignment: .leading)
             GeometryReader { geometry in

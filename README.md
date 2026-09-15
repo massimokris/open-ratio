@@ -31,7 +31,7 @@ shasum -a 256 -c Ratio-Native-1.0.0-universal.dmg.sha256
 
 The closed menu-bar item shows `NN/NN`. Its icon and text follow the active source: green ↑ for Create, red ↓ for Consume, and white ? for unclassified. Paused tracking shows two white pause bars and white text.
 
-The compact panel and menu-bar ratio use SF Mono at 12 points with 0.5 points of added letter spacing and an 18-point line height. Checkmarks and create/consume arrows use the text characters `✓`, `↑` and `↓`. Only the five bottom-bar buttons show a white background with dark labels on hover. The completed-classification `✓` button has a white background while its view is open and returns to its normal appearance when closed.
+The compact panel and menu-bar ratio use SF Mono at 12 points with 0.5 points of added letter spacing and an 18-point line height. The text symbols `✓`, `↑`, `↓` and `?` use Menlo Regular at 12 points for their compact glyph shapes; the menu-bar symbols and activity-row arrows share this styling. Only the five bottom-bar buttons show a white background with dark labels on hover. The completed-classification `✓` button has a white background while its view is open and returns to its normal appearance when closed.
 
 Foreground activity counts automatically while the app runs. The first five minutes without input count as an idle grace for reading. Sleep, an inactive session and unexplained gaps over ten seconds are excluded; the app never fills time while it was closed. Days use the local date when time was recorded and keep that date after timezone changes.
 

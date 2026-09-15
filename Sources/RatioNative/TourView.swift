@@ -94,7 +94,7 @@ struct TourView: View {
                         .accessibilityHidden(true)
                 } else {
                     Text(MenuIndicator.glyph(category: model.activeCategory))
-                        .font(RatioTheme.font()).foregroundStyle(indicatorColor)
+                        .font(Font(RatioTypography.glyphFont())).foregroundStyle(indicatorColor)
                         .accessibilityHidden(true)
                 }
                 Text(model.menuRatio + " D").font(RatioTheme.font()).monospacedDigit()

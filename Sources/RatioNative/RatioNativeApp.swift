@@ -220,9 +220,14 @@ final class RatioAppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate 
         button.image = paused ? MenuIndicator.image(category: category, paused: true) : nil
         button.imagePosition = paused ? .imageLeading : .noImage
         button.font = font
-        button.attributedTitle = NSAttributedString(
-            string: (paused ? "" : MenuIndicator.glyph(category: category)) + " " + model.menuRatio + (model.session.isDemo ? " D" : ""),
+        let glyph = paused ? "" : MenuIndicator.glyph(category: category)
+        let title = NSMutableAttributedString(
+            string: glyph + " " + model.menuRatio + (model.session.isDemo ? " D" : ""),
             attributes: [.font: font, .foregroundColor: color, .paragraphStyle: paragraph, .kern: RatioTypography.letterSpacing])
+        if !glyph.isEmpty {
+            title.addAttribute(.font, value: RatioTypography.glyphFont(), range: NSRange(location: 0, length: glyph.utf16.count))
+        }
+        button.attributedTitle = title
         button.toolTip = "Ratio · \(model.statusText)"
         button.setAccessibilityLabel("Ratio \(model.menuRatio), \(model.statusText)")
     }

@@ -69,7 +69,7 @@ struct RatioSummaryView: View {
     }
     private func ratioLabel(_ percentage: Double?, arrow: String, title: String, color: Color) -> some View {
         HStack(spacing: 7) {
-            Text(arrow).foregroundStyle(color)
+            Text(arrow).font(Font(RatioTypography.glyphFont())).foregroundStyle(color)
             HStack(spacing: 7) {
                 Text(percentage.map { String(format: "%.2f%%", $0) } ?? "—")
                     .foregroundStyle(color)
@@ -138,7 +138,7 @@ struct ActivityRow: View {
     }
     private func categoryLabel(_ category: ActivityCategory) -> some View {
         Text(category == .create ? "↑" : "↓")
-            .font(RatioTheme.font(size: 12, weight: .regular))
+            .font(Font(RatioTypography.glyphFont()))
             .foregroundStyle(activity.category == nil || activity.category == category
                              ? RatioTheme.category(category) : RatioTheme.muted)
             .frame(width: 44, height: 44)

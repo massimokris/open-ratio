@@ -4,6 +4,12 @@ import AppKit
 enum RatioTypography {
     static let letterSpacing: CGFloat = 0.5
 
+    /// Menlo supplies the compact text symbols used in source rows and the menu bar.
+    static func glyphFont() -> NSFont {
+        NSFont(name: "Menlo-Regular", size: 12)
+            ?? NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+    }
+
     static func nativeFont(size: CGFloat = 12, weight: NSFont.Weight = .regular) -> NSFont {
         if let font = NSFont(name: "SFMono-Regular", size: size) ?? NSFont(name: "SF Mono", size: size) {
             let descriptor = font.fontDescriptor.addingAttributes([

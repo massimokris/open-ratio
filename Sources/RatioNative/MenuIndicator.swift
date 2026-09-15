@@ -30,7 +30,7 @@ enum MenuIndicator {
                 mark.stroke()
             } else {
                 let text = NSAttributedString(string: glyph(category: category), attributes: [
-                    .font: RatioTypography.nativeFont(), .foregroundColor: color
+                    .font: RatioTypography.glyphFont(), .foregroundColor: color
                 ])
                 let size = text.size()
                 text.draw(at: NSPoint(x: (16 - size.width) / 2, y: (16 - size.height) / 2))
