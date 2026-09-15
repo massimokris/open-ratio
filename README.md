@@ -82,7 +82,7 @@ swift test
 
 `build.sh` compiles optimized arm64 and x86_64 executables with explicit macOS 13.0 targets in separate `build/swiftpm-<architecture>` scratch directories, combines them with `lipo`, supplies the original icon and bundle metadata, and signs with the browser Automation entitlement. It verifies each architecture before replacing `dist/Open Ratio.app`.
 
-`package-dmg.sh` builds again by default so it packages current source. It creates a compressed DMG containing the app, an Applications symlink and an installation note; verifies it; then writes a SHA-256 file. To package an already verified app without rebuilding (for example, a notarized app), run:
+`package-dmg.sh` builds again by default so it packages current source. It creates a compressed DMG containing the app and an Applications symlink; verifies it; then writes a SHA-256 file. To package an already verified app without rebuilding (for example, a notarized app), run:
 
 ```sh
 ./scripts/package-dmg.sh --skip-build
@@ -91,7 +91,7 @@ swift test
 open 'dist/Open Ratio.app'
 ```
 
-The verifier checks both architectures, macOS minimum version, menu bar bundle metadata, app icon presence, strict code signatures, hardened runtime and the Apple-events entitlement. For DMGs it also checks image integrity, read-only mounting, the installation note and Applications symlink, then detaches normally. It does not launch the app or claim Gatekeeper/notarization acceptance. Build outputs in `build/`, `.build/` and `dist/` are ignored by Git. To regenerate the original icon:
+The verifier checks both architectures, macOS minimum version, menu bar bundle metadata, app icon presence, strict code signatures, hardened runtime and the Apple-events entitlement. For DMGs it also checks image integrity, read-only mounting and the Applications symlink, then detaches normally. It does not launch the app or claim Gatekeeper/notarization acceptance. Build outputs in `build/`, `.build/` and `dist/` are ignored by Git. To regenerate the original icon:
 
 ```sh
 swift scripts/generate-icon.swift 'build/RatioNative.iconset'

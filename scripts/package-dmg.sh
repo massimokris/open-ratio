@@ -24,32 +24,6 @@ trap 'rm -rf -- "$ratio_package_stage"' EXIT
 mkdir "$ratio_package_stage/image"
 /usr/bin/ditto "$ratio_app" "$ratio_package_stage/image/Open Ratio.app"
 ln -s /Applications "$ratio_package_stage/image/Applications"
-cat > "$ratio_package_stage/image/Install Open Ratio.txt" <<'INSTALL'
-OPEN RATIO — INSTALLATION
-
-1. Drag Open Ratio.app onto the Applications shortcut.
-2. Eject this disk image, then open Open Ratio from Applications.
-3. The compact panel opens at launch. Click its ratio in the menu bar to reopen it.
-   The footer gear opens Appearance, Track websites and Demo in that same panel.
-   Right-click the menu bar ratio for additional commands and Quit.
-
-Requires macOS 13 or later. This universal app contains arm64 and x86_64 code.
-Activity and preferences stay on your Mac. Website tracking is optional and uses only your default browser.
-
-The default local build is ad-hoc signed and is not notarized. If macOS blocks a
-downloaded copy, first review its source and checksum. For a copy you trust, use
-the per-app Open Anyway control in System Settings > Privacy & Security after
-attempting to open it. Do not disable Gatekeeper or remove quarantine globally.
-Apple's instructions: https://support.apple.com/en-gb/102445
-
-Data folder: ~/Library/Application Support/RatioNative/
-The panel context menu includes Show Data Folder and local CSV export.
-RESET clears today's real time; Undo Reset restores it during the current launch.
-Demo activity is fictional and separate from real history.
-
-See the source project's README.md for builds, permissions, recovery and signing.
-This is an independent implementation, not an official Ratio distribution.
-INSTALL
 
 /usr/bin/hdiutil create -volname "Open Ratio $ratio_version" \
     -srcfolder "$ratio_package_stage/image" -format UDZO -fs HFS+ \
