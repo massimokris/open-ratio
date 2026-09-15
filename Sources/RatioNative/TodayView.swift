@@ -97,7 +97,7 @@ struct ActivityRow: View {
                     .truncationMode(.middle)
                 Spacer(minLength: 2)
                 if isTracking {
-                    Circle().fill(RatioTheme.category(activity.category)).frame(width: 4, height: 4)
+                    Circle().fill(RatioTheme.create).frame(width: 4, height: 4)
                         .accessibilityLabel("Active source")
                 }
                 Text(PanelFormatting.elapsed(activity.seconds))

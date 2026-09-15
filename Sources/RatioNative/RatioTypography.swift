@@ -2,7 +2,7 @@ import AppKit
 
 /// Native equivalent of the reference's SF Mono stack and 1.5 line height.
 enum RatioTypography {
-    static let letterSpacing: CGFloat = 0.5
+    static let letterSpacing: CGFloat = 0.4
 
     /// Menlo supplies the compact text symbols used in source rows and the menu bar.
     static func glyphFont() -> NSFont {
