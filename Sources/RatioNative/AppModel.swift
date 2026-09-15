@@ -150,6 +150,7 @@ final class AppModel: ObservableObject {
     func startDemo() {
         refreshTracking()
         saveActivity()
+        if isReferenceDemo { session.exitDemo(); isReferenceDemo = false }
         session.enterDemo(day: today)
         page = .today
         filter = .all
@@ -162,9 +163,14 @@ final class AppModel: ObservableObject {
         page = .today
         filter = .all
     }
-    func resetDemo() { session.resetDemo(day: today); filter = .all }
+    func resetDemo() {
+        if isReferenceDemo { startDemo() }
+        else { session.resetDemo(day: today) }
+        filter = .all
+    }
     func exitDemo() { session.exitDemo(); isReferenceDemo = false; refreshTracking(); filter = .all }
     func resetToday() {
+        if session.isDemo { resetDemo(); return }
         refreshTracking()
         session.resetDay(today)
         refreshTracking()
