@@ -17,6 +17,7 @@ final class AppModel: ObservableObject {
     @Published var now = Date()
     @Published private(set) var storageNotice: String?
     @Published private(set) var isReferenceDemo = false
+    let browserTracking = BrowserTrackingCoordinator()
     let dataDirectory: URL
     @Published var appearance: Appearance {
         didSet { UserDefaults.standard.set(appearance.rawValue, forKey: "appearance") }
@@ -49,10 +50,20 @@ final class AppModel: ObservableObject {
         }
         if ProcessInfo.processInfo.arguments.contains("--reference-demo") { startReferenceDemo() }
         else if ProcessInfo.processInfo.arguments.contains("--demo") { startDemo() }
+        browserTracking.onChange = { [weak self] in self?.refreshTracking() }
+        foregroundMonitor.onForegroundApplicationChange = { [weak self] application in
+            guard let self else { return }
+            self.browserTracking.foregroundChanged(self.capturesWebsites ? application : nil)
+        }
+        foregroundMonitor.sourceResolver = { [weak self] application, fallback in
+            guard let self, self.capturesWebsites else { return fallback }
+            return self.browserTracking.resolve(application, fallingBackTo: fallback)
+        }
         foregroundMonitor.onObservation = { [weak self] in self?.receive($0) }
         foregroundMonitor.onSystemActiveChange = { [weak self] active in
             guard let self else { return }
             self.session.setSystemActive(active)
+            if !active { self.browserTracking.foregroundChanged(nil) }
             if !active { self.saveActivity() }
         }
         foregroundMonitor.start()
@@ -93,19 +104,21 @@ final class AppModel: ObservableObject {
         return "\(create) : \(100 - create)"
     }
     var indicatorPaused: Bool { session.isPaused || (!session.isDemo && (session.isLiveIdle || !session.isSystemActive)) }
+    private var capturesWebsites: Bool { !session.isDemo && !session.isPaused && session.isSystemActive }
+    var browserFallbackNotice: String? { capturesWebsites ? browserTracking.fallbackNotice : nil }
     var activeStatusText: String {
         if session.isPaused { return "Paused" }
         if session.isDemo { return "Demo activity" }
         if !session.isSystemActive { return "Session inactive" }
         if session.isLiveIdle { return "Idle · five-minute grace ended" }
-        return "In focus now"
+        return browserFallbackNotice ?? "In focus now"
     }
     var statusText: String {
         if session.isPaused { return "Tracking paused" }
         if session.isDemo { return "Demo is running" }
         if !session.isSystemActive { return "Session inactive" }
         if session.isLiveIdle { return "Idle · tracking suspended" }
-        return activeSource == nil ? "Waiting for activity" : "Tracking activity"
+        return browserFallbackNotice ?? (activeSource == nil ? "Waiting for activity" : "Tracking activity")
     }
     var canUndoReset: Bool { session.canUndoReset }
 
@@ -152,6 +165,7 @@ final class AppModel: ObservableObject {
         saveActivity()
         if isReferenceDemo { session.exitDemo(); isReferenceDemo = false }
         session.enterDemo(day: today)
+        browserTracking.foregroundChanged(nil)
         page = .today
         filter = .all
     }
@@ -159,6 +173,7 @@ final class AppModel: ObservableObject {
         refreshTracking()
         saveActivity()
         session.enterDemo(ledger: ReferenceDemo.ledger(day: today), activeSource: ReferenceDemo.activeSource)
+        browserTracking.foregroundChanged(nil)
         isReferenceDemo = true
         page = .today
         filter = .all
@@ -168,7 +183,13 @@ final class AppModel: ObservableObject {
         else { session.resetDemo(day: today) }
         filter = .all
     }
-    func exitDemo() { session.exitDemo(); isReferenceDemo = false; refreshTracking(); filter = .all }
+    func exitDemo() {
+        session.exitDemo()
+        isReferenceDemo = false
+        refreshTracking()
+        filter = .all
+        tourPresented = false
+    }
     func resetToday() {
         if session.isDemo { resetDemo(); return }
         refreshTracking()

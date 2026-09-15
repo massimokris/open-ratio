@@ -6,6 +6,7 @@ import RatioCore
 @MainActor
 final class ForegroundActivityMonitor {
     var sourceResolver: ((NSRunningApplication, ActivitySource) -> ActivitySource)?
+    var onForegroundApplicationChange: ((NSRunningApplication?) -> Void)?
     var onObservation: ((ActivityObservation) -> Void)?
     var onSystemActiveChange: ((Bool) -> Void)?
     private var observers: [NSObjectProtocol] = []
@@ -31,7 +32,9 @@ final class ForegroundActivityMonitor {
 
     func sample() -> ActivityObservation {
         let source: ActivitySource?
-        if let application = NSWorkspace.shared.frontmostApplication,
+        let foreground = NSWorkspace.shared.frontmostApplication
+        onForegroundApplicationChange?(foreground)
+        if let application = foreground,
            application.processIdentifier != ProcessInfo.processInfo.processIdentifier {
             let identity = application.bundleIdentifier ?? application.bundleURL?.path
             if let identity {
