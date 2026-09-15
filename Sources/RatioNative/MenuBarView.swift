@@ -54,40 +54,56 @@ struct MenuBarView: View {
     private var statusRow: some View {
         Group {
             if model.page == .history {
-                HStack(spacing: 8) {
-                    Text(statusTitle)
-                        .lineLimit(1)
-                        .help(model.storageNotice ?? "Recorded days")
-                        .onTapGesture { if model.storageNotice != nil { showPreferences() } }
-                        .pointingHandCursor(model.storageNotice != nil)
-                    if let selectedHistoryDay {
-                        Text(HistoryFormatting.dateLabel(for: selectedHistoryDay)).fixedSize()
-                    }
-                    Spacer(minLength: 8)
-                    if selectedHistoryDay != nil {
-                        Button { selectedHistoryDay = nil } label: {
-                            Image(systemName: "arrow.left")
-                                .font(.system(size: 13))
-                                .foregroundStyle(RatioTheme.text)
-                                .frame(width: 44, height: 44)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PanelButtonStyle())
-                        .accessibilityLabel("Back to daily history")
-                        .help("Back to daily history")
-                    } else {
-                        Text("\(model.session.ledger.days.count) DAYS")
-                            .fixedSize().padding(.trailing, 16)
-                    }
-                }
-                .foregroundStyle(model.storageNotice == nil ? RatioTheme.secondary : RatioTheme.unknown)
-                .padding(.leading, 16)
+                historyStatusRow
             } else {
                 trackingStatusRow
             }
         }
         .frame(width: 360, height: 44)
         .overlay(alignment: .bottom) { Hairline() }
+    }
+    private var historyStatusRow: some View {
+        Group {
+            if let day = selectedHistoryDay {
+                HStack(spacing: 0) {
+                    HStack(spacing: 6) {
+                        historyStatusTitle
+                        Spacer(minLength: 0)
+                        Text(HistoryFormatting.dateLabel(for: day)).fixedSize()
+                    }
+                    .padding(.leading, 16)
+                    .padding(.trailing, 9)
+                    .frame(width: 272, height: 44)
+                    Button { selectedHistoryDay = nil } label: {
+                        Image(systemName: "arrow.left")
+                            .font(.system(size: 13))
+                            .foregroundStyle(RatioTheme.text)
+                            .frame(width: 88, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PanelButtonStyle())
+                    .overlay(alignment: .leading) { Rectangle().fill(RatioTheme.line).frame(width: 0.5) }
+                    .accessibilityLabel("Back to daily history")
+                    .help("Back to daily history")
+                }
+            } else {
+                HStack(spacing: 8) {
+                    historyStatusTitle
+                    Spacer(minLength: 8)
+                    Text("\(model.session.ledger.days.count) DAYS")
+                        .fixedSize().padding(.trailing, 16)
+                }
+                .padding(.leading, 16)
+            }
+        }
+        .foregroundStyle(model.storageNotice == nil ? RatioTheme.secondary : RatioTheme.unknown)
+    }
+    private var historyStatusTitle: some View {
+        Text(statusTitle)
+            .lineLimit(1)
+            .help(model.storageNotice ?? "Recorded days")
+            .onTapGesture { if model.storageNotice != nil { showPreferences() } }
+            .pointingHandCursor(model.storageNotice != nil)
     }
     private var trackingStatusRow: some View {
         HStack(spacing: 0) {
