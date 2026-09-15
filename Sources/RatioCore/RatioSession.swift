@@ -149,6 +149,21 @@ public enum DemoData {
             if index < 3 { ledger.classify(source, as: .create) }
             else if index < 6 { ledger.classify(source, as: .consume) }
         }
+        // Fictional prior days make history explorable without manufacturing live activity.
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let components = day.split(separator: "-").compactMap { Int($0) }
+        if components.count == 3,
+           let date = calendar.date(from: DateComponents(year: components[0], month: components[1], day: components[2], hour: 12)) {
+            let previousMinutes: [[Double]] = [[50, 45, 15, 40, 20, 10, 15, 10], [30, 60, 20, 25, 15, 5, 20, 5]]
+            for (offset, totals) in previousMinutes.enumerated() {
+                guard let previousDate = calendar.date(byAdding: .day, value: -(offset + 1), to: date) else { continue }
+                let previousDay = ActivityFormatting.dayIdentifier(for: previousDate, calendar: calendar)
+                for (index, source) in sources.enumerated() {
+                    ledger.record(seconds: totals[index] * 60, source: source, day: previousDay)
+                }
+            }
+        }
         return ledger
     }
 }
