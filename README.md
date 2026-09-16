@@ -2,7 +2,7 @@
 
 A macOS menu bar app for noticing the balance between **Create** and **Consume**. There is no webview, network service, account, analytics or third-party dependency.
 
-Download it [here](https://github.com/massimokris/open-ratio/releases/download/v1/Open-Ratio-1.0.0-universal.dmg) for free.
+Download it [here](https://github.com/massimokris/open-ratio/releases/download/v1.1.0/Open-Ratio-1.1.0-universal.dmg) for free.
 
 > This is an independent implementation inspired by [Ratio by Jack Butcher](https://x.com/jackbutcher/status/2099526332178629044). Is not the original source, an official distribution or an endorsed product. No proprietary executable or source was downloaded or reverse engineered.
 
@@ -62,6 +62,6 @@ swift test
 ./scripts/package-dmg.sh
 ```
 
-The packaging script creates `dist/Open Ratio.app` and `dist/Open-Ratio-1.0.0-universal.dmg`. Keep time accounting separate from the UI and macOS adapters, and use system frameworks.
+The packaging script creates `dist/Open Ratio.app` and `dist/Open-Ratio-1.1.0-universal.dmg`. Keep time accounting separate from the UI and macOS adapters, and use system frameworks.
 
 Got feedback? DM me on X [@massimokris](https://x.com/massimokris)
