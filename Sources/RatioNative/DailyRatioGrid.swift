@@ -1,36 +1,75 @@
 import Foundation
 import RatioCore
 
+/// Interprets persisted local-day labels without applying the Mac's current timezone.
+enum RecordedDayFormatting {
+    private static let identifierFormatter = formatter("yyyy-MM-dd")
+    private static let shortDateFormatter = formatter("MMM dd")
+
+    static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        // GMT makes date-only arithmetic deterministic; it does not rebucket the recorded local-day label.
+        calendar.timeZone = .gmt
+        return calendar
+    }
+
+    static func date(from dayIdentifier: String) -> Date? {
+        guard let date = identifierFormatter.date(from: dayIdentifier),
+              identifierFormatter.string(from: date) == dayIdentifier else {
+            return nil
+        }
+        return date
+    }
+
+    static func identifier(for date: Date) -> String {
+        identifierFormatter.string(from: date)
+    }
+
+    static func shortDateLabel(for dayIdentifier: String) -> String? {
+        guard let date = date(from: dayIdentifier) else { return nil }
+        return shortDateFormatter.string(from: date)
+    }
+
+    private static func formatter(_ format: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = calendar
+        formatter.timeZone = .gmt
+        formatter.dateFormat = format
+        formatter.isLenient = false
+        return formatter
+    }
+}
+
 struct DailyRatioGrid {
     static let weekCount = 26
     let weeks: [DailyRatioWeek]
 
     init(ledger: ActivityLedger, today: String) {
-        let calendar = Self.recordedDayCalendar
-        guard let todayDate = Self.date(from: today, calendar: calendar),
-              let currentWeekStart = calendar.date(
-                byAdding: .day,
-                value: -(calendar.component(.weekday, from: todayDate) - 1),
-                to: todayDate
-              ),
-              let gridStart = calendar.date(
-                byAdding: .weekOfYear,
-                value: -(Self.weekCount - 1),
-                to: currentWeekStart
-              ) else {
+        let calendar = RecordedDayFormatting.calendar
+        guard let todayDate = RecordedDayFormatting.date(from: today) else {
+            weeks = []
+            return
+        }
+        // Gregorian weekday numbering is Sunday = 1, regardless of the locale's first weekday.
+        let daysSinceSunday = calendar.component(.weekday, from: todayDate) - 1
+        let oldestWeekOffset = -7 * (Self.weekCount - 1)
+        guard let currentWeekStart = calendar.date(byAdding: .day, value: -daysSinceSunday, to: todayDate),
+              let gridStart = calendar.date(byAdding: .day, value: oldestWeekOffset, to: currentWeekStart) else {
             weeks = []
             return
         }
 
         weeks = (0..<Self.weekCount).compactMap { weekOffset in
-            guard let weekStart = calendar.date(byAdding: .weekOfYear, value: weekOffset, to: gridStart) else {
+            guard let weekStart = calendar.date(byAdding: .day, value: weekOffset * 7, to: gridStart) else {
                 return nil
             }
             let slots = (0..<7).compactMap { weekdayOffset -> DailyRatioSlot? in
                 guard let date = calendar.date(byAdding: .day, value: weekdayOffset, to: weekStart) else {
                     return nil
                 }
-                let dayIdentifier = ActivityFormatting.dayIdentifier(for: date, calendar: calendar)
+                let dayIdentifier = RecordedDayFormatting.identifier(for: date)
                 let day = date <= todayDate
                     ? DailyRatioDay(dayIdentifier: dayIdentifier, summary: ledger.summary(on: dayIdentifier))
                     : nil
@@ -38,30 +77,6 @@ struct DailyRatioGrid {
             }
             return DailyRatioWeek(slots: slots)
         }
-    }
-
-    private static var recordedDayCalendar: Calendar {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.locale = Locale(identifier: "en_US_POSIX")
-        calendar.timeZone = .gmt
-        return calendar
-    }
-
-    private static func date(from dayIdentifier: String, calendar: Calendar) -> Date? {
-        let components = dayIdentifier.split(separator: "-").compactMap { Int($0) }
-        guard components.count == 3,
-              let date = calendar.date(from: DateComponents(
-                calendar: calendar,
-                timeZone: calendar.timeZone,
-                year: components[0],
-                month: components[1],
-                day: components[2],
-                hour: 12
-              )),
-              ActivityFormatting.dayIdentifier(for: date, calendar: calendar) == dayIdentifier else {
-            return nil
-        }
-        return date
     }
 }
 
@@ -91,8 +106,7 @@ struct DailyRatioDay: Identifiable {
         self.dayIdentifier = dayIdentifier
         let createSeconds = summary.createSeconds
         let consumeSeconds = summary.consumeSeconds
-        let classifiedSeconds = createSeconds + consumeSeconds
-        guard classifiedSeconds > 0 else {
+        guard let createPercentage = summary.createPercentage, createPercentage.isFinite else {
             presentation = .noRatio
             return
         }
@@ -101,8 +115,8 @@ struct DailyRatioDay: Identifiable {
             return
         }
         let category: ActivityCategory = createSeconds > consumeSeconds ? .create : .consume
-        let dominantSeconds = max(createSeconds, consumeSeconds)
-        presentation = .dominant(category: category, percentage: dominantSeconds / classifiedSeconds * 100)
+        let dominantPercentage = category == .create ? createPercentage : 100 - createPercentage
+        presentation = .dominant(category: category, percentage: dominantPercentage)
     }
 
     var opacity: Double {
@@ -111,7 +125,7 @@ struct DailyRatioDay: Identifiable {
     }
 
     var tooltip: String {
-        let dateLabel = Self.tooltipDateLabel(for: dayIdentifier)
+        let dateLabel = RecordedDayFormatting.shortDateLabel(for: dayIdentifier) ?? dayIdentifier
         switch presentation {
         case .noRatio:
             return "No ratio on \(dateLabel)"
@@ -121,17 +135,6 @@ struct DailyRatioDay: Identifiable {
             let categoryLabel = category == .create ? "Creating" : "Consuming"
             return "\(Int(percentage.rounded()))% \(categoryLabel) on \(dateLabel)"
         }
-    }
-
-    private static func tooltipDateLabel(for dayIdentifier: String) -> String {
-        let components = dayIdentifier.split(separator: "-").compactMap { Int($0) }
-        let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        guard components.count == 3,
-              months.indices.contains(components[1] - 1),
-              (1...31).contains(components[2]) else {
-            return dayIdentifier
-        }
-        return String(format: "%@ %02d", months[components[1] - 1], components[2])
     }
 }
 

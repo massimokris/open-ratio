@@ -101,38 +101,44 @@ final class DailyRatioGridTests: XCTestCase {
     func testTooltipPlacementCentersAboveWhenPossibleAndStaysInsidePanelEdges() {
         let bounds = CGRect(x: 0, y: 0, width: 360, height: 220)
         let tooltipSize = CGSize(width: 200, height: 22)
+        let middleCell = CGRect(x: 175, y: 48, width: 10, height: 10)
+        let firstTopCell = CGRect(x: 25, y: 16, width: 10, height: 10)
+        let lastTopCell = CGRect(x: 325, y: 16, width: 10, height: 10)
 
         let middle = DailyRatioTooltipPlacement.center(
-            for: CGRect(x: 175, y: 48, width: 10, height: 10),
+            for: middleCell,
             tooltipSize: tooltipSize,
             within: bounds
         )
         let firstTop = DailyRatioTooltipPlacement.center(
-            for: CGRect(x: 25, y: 16, width: 10, height: 10),
+            for: firstTopCell,
             tooltipSize: tooltipSize,
             within: bounds
         )
         let lastTop = DailyRatioTooltipPlacement.center(
-            for: CGRect(x: 325, y: 16, width: 10, height: 10),
+            for: lastTopCell,
             tooltipSize: tooltipSize,
             within: bounds
         )
 
         XCTAssertEqual(middle, CGPoint(x: 180, y: 33))
-        XCTAssertLessThanOrEqual(tooltipFrame(center: middle, size: tooltipSize).maxY, 48)
+        XCTAssertLessThanOrEqual(tooltipFrame(center: middle, size: tooltipSize).maxY, middleCell.minY)
         XCTAssertGreaterThanOrEqual(tooltipFrame(center: firstTop, size: tooltipSize).minX, bounds.minX)
         XCTAssertGreaterThanOrEqual(tooltipFrame(center: firstTop, size: tooltipSize).minY, bounds.minY)
-        XCTAssertGreaterThanOrEqual(tooltipFrame(center: firstTop, size: tooltipSize).minY, 26)
+        XCTAssertGreaterThanOrEqual(tooltipFrame(center: firstTop, size: tooltipSize).minY, firstTopCell.maxY)
         XCTAssertLessThanOrEqual(tooltipFrame(center: lastTop, size: tooltipSize).maxX, bounds.maxX)
         XCTAssertGreaterThanOrEqual(tooltipFrame(center: lastTop, size: tooltipSize).minY, bounds.minY)
-        XCTAssertGreaterThanOrEqual(tooltipFrame(center: lastTop, size: tooltipSize).minY, 26)
+        XCTAssertGreaterThanOrEqual(tooltipFrame(center: lastTop, size: tooltipSize).minY, lastTopCell.maxY)
     }
 
     func testGridGeometryFitsTheCompactPanel() {
+        let panelWidth: CGFloat = 360
+        let minimumSideInset: CGFloat = 16
+
         XCTAssertEqual(DailyRatioGridMetrics.width, 310)
         XCTAssertEqual(DailyRatioGridMetrics.height, 82)
-        XCTAssertEqual(DailyRatioGridMetrics.width + 32, 342)
-        XCTAssertLessThanOrEqual(DailyRatioGridMetrics.width + 32, 360)
+        XCTAssertEqual(DailyRatioGridMetrics.width + minimumSideInset * 2, 342)
+        XCTAssertLessThanOrEqual(DailyRatioGridMetrics.width + minimumSideInset * 2, panelWidth)
     }
 
     func testReclassificationRebuildsHistoricalRatioWithoutChangingTrackedTime() throws {

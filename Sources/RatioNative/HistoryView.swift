@@ -164,7 +164,7 @@ private struct DailyRatioTooltip: View {
 
     var body: some View {
         Text(text)
-            .font(RatioTheme.font(size: 10))
+            .font(RatioTheme.font())
             .foregroundStyle(RatioTheme.text)
             .lineLimit(1)
             .fixedSize()
@@ -290,23 +290,7 @@ private struct HistoryDayRow: View {
 }
 
 enum HistoryFormatting {
-    private static let recordedDayFormatter = formatter("yyyy-MM-dd")
-    private static let dateLabelFormatter = formatter("MMM dd")
-
     static func dateLabel(for recordedDay: String) -> String {
-        guard let date = recordedDayFormatter.date(from: recordedDay),
-              recordedDayFormatter.string(from: date) == recordedDay else { return recordedDay }
-        return dateLabelFormatter.string(from: date).uppercased()
-    }
-
-    private static func formatter(_ format: String) -> DateFormatter {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        // These are recorded calendar labels, so the current timezone must not shift them.
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = format
-        formatter.isLenient = false
-        return formatter
+        RecordedDayFormatting.shortDateLabel(for: recordedDay)?.uppercased() ?? recordedDay
     }
 }
