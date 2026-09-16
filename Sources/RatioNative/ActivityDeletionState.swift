@@ -27,9 +27,9 @@ struct ActivityDeleteGestureState {
     }
 
     mutating func finish() {
-        guard !didCommit else { return }
         offset = 0
         direction = .undecided
+        didCommit = false
     }
 
     mutating func resumeControlActivation() {

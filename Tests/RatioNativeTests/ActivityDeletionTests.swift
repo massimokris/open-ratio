@@ -16,6 +16,27 @@ final class ActivityDeletionTests: XCTestCase {
         XCTAssertEqual(atThreshold.offset, 288)
     }
 
+    func testCommittedDragResetsBeforeUndoRestoresTheRow() {
+        var gesture = ActivityDeleteGestureState()
+        XCTAssertTrue(gesture.update(translation: CGSize(width: 288, height: 0), rowWidth: 360))
+
+        // The committed gesture must be neutral before undo can restore an
+        // activity row whose SwiftUI state may have been preserved.
+        gesture.finish()
+
+        XCTAssertEqual(gesture.offset, 0)
+        XCTAssertTrue(gesture.suppressesControlActivation)
+        gesture.resumeControlActivation()
+
+        XCTAssertFalse(gesture.update(translation: CGSize(width: 9, height: 10), rowWidth: 360))
+        XCTAssertEqual(gesture.offset, 0)
+        gesture.finish()
+        gesture.resumeControlActivation()
+
+        XCTAssertFalse(gesture.update(translation: CGSize(width: 20, height: 0), rowWidth: 360))
+        XCTAssertEqual(gesture.offset, 20)
+    }
+
     func testVerticalAndLeftwardGesturesNeverBecomeDeleteDrags() {
         var vertical = ActivityDeleteGestureState()
         XCTAssertFalse(vertical.update(translation: CGSize(width: 9, height: 10), rowWidth: 360))
