@@ -34,13 +34,29 @@ final class ActivityHistoryTests: XCTestCase {
         let realHistory = session.ledger
         session.enterDemo(day: "2026-01-01")
 
-        XCTAssertEqual(session.ledger.history.map(\.day), ["2026-01-01", "2025-12-31", "2025-12-30"])
-        XCTAssertEqual(session.ledger.summary(on: "2025-12-31").totalSeconds, 12300)
+        let demoHistory = session.ledger.history
+        XCTAssertEqual(demoHistory.count, 30)
+        XCTAssertEqual(demoHistory.first?.day, "2026-01-01")
+        XCTAssertEqual(demoHistory.last?.day, "2025-12-03")
+        let demoPercentages = demoHistory.compactMap(\.createPercentage)
+        XCTAssertEqual(demoPercentages.count, 30)
+        XCTAssertTrue(demoPercentages.contains { $0 > 50 && $0 < 80 })
+        XCTAssertTrue(demoPercentages.contains { $0 >= 80 })
+        XCTAssertTrue(demoPercentages.contains { $0 < 50 && $0 > 20 })
+        XCTAssertTrue(demoPercentages.contains { $0 <= 20 })
+        XCTAssertTrue(demoPercentages.contains { abs($0 - 50) < 0.000_001 })
+        XCTAssertEqual(session.ledger.summary(on: "2025-12-31").createPercentage ?? -1, 70, accuracy: 0.000_001)
+        XCTAssertEqual(session.ledger.summary(on: "2025-12-30").createPercentage ?? -1, 30, accuracy: 0.000_001)
+        XCTAssertEqual(session.ledger.summary(on: "2025-12-23").createPercentage ?? -1, 50, accuracy: 0.000_001)
         XCTAssertFalse(session.ledger.activityCSV().contains("app.real"))
         let demo = session.ledger
         let figma = try XCTUnwrap(session.availableDemoSources.first { $0.id == "demo.figma" })
+        let createBeforeReclassification = session.ledger.summary(on: "2025-12-31").createSeconds
         session.classify(figma, as: .consume)
-        XCTAssertEqual(session.ledger.summary(on: "2025-12-31").createSeconds, 3600)
+        XCTAssertLessThan(
+            session.ledger.summary(on: "2025-12-31").createSeconds,
+            createBeforeReclassification
+        )
         session.resetDemo(day: "2026-01-01")
         XCTAssertEqual(session.ledger, demo)
         session.exitDemo()
@@ -49,6 +65,15 @@ final class ActivityHistoryTests: XCTestCase {
             + "2026-09-13,application,app.real,Real editor,create,90.0\r\n")
         XCTAssertTrue(session.isPaused)
         XCTAssertEqual(session.activeSource, source)
+    }
+
+    func testDemoThirtyDayHistoryRemainsContiguousAcrossLeapDay() {
+        let history = DemoData.ledger(day: "2024-03-01").history.map(\.day)
+
+        XCTAssertEqual(history.count, 30)
+        XCTAssertEqual(history.first, "2024-03-01")
+        XCTAssertEqual(history.dropFirst().first, "2024-02-29")
+        XCTAssertEqual(history.last, "2024-02-01")
     }
 
     func testExportEscapesSourceTextAndUsesCurrentCategoryForRetainedDates() {

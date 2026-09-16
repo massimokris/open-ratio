@@ -190,6 +190,15 @@ public struct RatioSession {
 }
 
 public enum DemoData {
+    /// Twenty-nine prior days span both categories and the grid's full intensity range.
+    private static let priorDayCreatePercentages: [Double] = [
+        70, 30, 80, 20, 60, 40, 90, 10, 50, 75,
+        25, 65, 35, 85, 15, 55, 45, 95, 5, 100,
+        0, 72, 28, 82, 18, 62, 38, 52, 48
+    ]
+    private static let createSourceWeights: [Double] = [0.52, 0.33, 0.15]
+    private static let consumeSourceWeights: [Double] = [0.58, 0.27, 0.15]
+
     public static let sources: [ActivitySource] = [
         ActivitySource(id: "demo.figma", name: "Figma"),
         ActivitySource(id: "demo.code", name: "Visual Studio Code"),
@@ -208,22 +217,58 @@ public enum DemoData {
             if index < 3 { ledger.classify(source, as: .create) }
             else if index < 6 { ledger.classify(source, as: .consume) }
         }
-        // Fictional prior days make history explorable without manufacturing live activity.
+        // Fictional prior days make history and the ratio grid explorable without
+        // manufacturing live activity.
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .gmt
         let components = day.split(separator: "-").compactMap { Int($0) }
         if components.count == 3,
            let date = calendar.date(from: DateComponents(year: components[0], month: components[1], day: components[2], hour: 12)) {
-            let previousMinutes: [[Double]] = [[50, 45, 15, 40, 20, 10, 15, 10], [30, 60, 20, 25, 15, 5, 20, 5]]
-            for (offset, totals) in previousMinutes.enumerated() {
+            for (offset, createPercentage) in priorDayCreatePercentages.enumerated() {
                 guard let previousDate = calendar.date(byAdding: .day, value: -(offset + 1), to: date) else { continue }
                 let previousDay = ActivityFormatting.dayIdentifier(for: previousDate, calendar: calendar)
-                for (index, source) in sources.enumerated() {
-                    ledger.record(seconds: totals[index] * 60, source: source, day: previousDay)
-                }
+                let classifiedMinutes = 120 + Double((offset % 5) * 15)
+                let createMinutes = classifiedMinutes * createPercentage / 100
+                let consumeMinutes = classifiedMinutes - createMinutes
+                record(
+                    totalMinutes: createMinutes,
+                    weights: createSourceWeights,
+                    sources: sources[0..<3],
+                    day: previousDay,
+                    in: &ledger
+                )
+                record(
+                    totalMinutes: consumeMinutes,
+                    weights: consumeSourceWeights,
+                    sources: sources[3..<6],
+                    day: previousDay,
+                    in: &ledger
+                )
+                ledger.record(
+                    seconds: Double(8 + offset % 4) * 60,
+                    source: sources[6],
+                    day: previousDay
+                )
+                ledger.record(
+                    seconds: Double(4 + offset % 3) * 60,
+                    source: sources[7],
+                    day: previousDay
+                )
             }
         }
         return ledger
+    }
+
+    private static func record(
+        totalMinutes: Double,
+        weights: [Double],
+        sources: ArraySlice<ActivitySource>,
+        day: String,
+        in ledger: inout ActivityLedger
+    ) {
+        for (source, weight) in zip(sources, weights) {
+            ledger.record(seconds: totalMinutes * weight * 60, source: source, day: day)
+        }
     }
 }
 
