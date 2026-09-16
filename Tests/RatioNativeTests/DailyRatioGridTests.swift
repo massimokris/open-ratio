@@ -133,12 +133,18 @@ final class DailyRatioGridTests: XCTestCase {
 
     func testGridGeometryFitsTheCompactPanel() {
         let panelWidth: CGFloat = 360
-        let minimumSideInset: CGFloat = 16
+        let contentSideInset: CGFloat = 16
+        let firstCell = DailyRatioGridMetrics.cellFrame(column: 0, row: 0, containerWidth: panelWidth)
+        let lastCell = DailyRatioGridMetrics.cellFrame(
+            column: DailyRatioGrid.weekCount - 1,
+            row: 0,
+            containerWidth: panelWidth
+        )
 
-        XCTAssertEqual(DailyRatioGridMetrics.width, 310)
+        XCTAssertEqual(DailyRatioGridMetrics.width, panelWidth - contentSideInset * 2)
         XCTAssertEqual(DailyRatioGridMetrics.height, 82)
-        XCTAssertEqual(DailyRatioGridMetrics.width + minimumSideInset * 2, 342)
-        XCTAssertLessThanOrEqual(DailyRatioGridMetrics.width + minimumSideInset * 2, panelWidth)
+        XCTAssertEqual(firstCell.minX, contentSideInset, accuracy: 0.000_001)
+        XCTAssertEqual(lastCell.maxX, panelWidth - contentSideInset, accuracy: 0.000_001)
     }
 
     func testReclassificationRebuildsHistoricalRatioWithoutChangingTrackedTime() throws {

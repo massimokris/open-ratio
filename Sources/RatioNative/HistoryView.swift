@@ -101,9 +101,9 @@ private struct DailyRatioCalendarView: View {
     @Binding var hoveredDayIdentifier: String?
 
     var body: some View {
-        HStack(spacing: DailyRatioGridMetrics.spacing) {
+        HStack(spacing: DailyRatioGridMetrics.columnSpacing) {
             ForEach(grid.weeks) { week in
-                VStack(spacing: DailyRatioGridMetrics.spacing) {
+                VStack(spacing: DailyRatioGridMetrics.rowSpacing) {
                     ForEach(week.slots) { slot in
                         if let day = slot.day {
                             DailyRatioSquare(day: day)

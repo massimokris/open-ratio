@@ -140,25 +140,31 @@ struct DailyRatioDay: Identifiable {
 
 enum DailyRatioGridMetrics {
     static let cellSize: CGFloat = 10
-    static let spacing: CGFloat = 2
+    static let rowSpacing: CGFloat = 2
     static let rowCount = 7
+    static let panelWidth: CGFloat = 360
+    static let contentSideInset: CGFloat = 16
     static let topInset: CGFloat = 16
     static let bottomInset: CGFloat = 16
     static var width: CGFloat {
-        CGFloat(DailyRatioGrid.weekCount) * cellSize
-            + CGFloat(DailyRatioGrid.weekCount - 1) * spacing
+        panelWidth - contentSideInset * 2
+    }
+    static var columnSpacing: CGFloat {
+        let cellsWidth = CGFloat(DailyRatioGrid.weekCount) * cellSize
+        return (width - cellsWidth) / CGFloat(DailyRatioGrid.weekCount - 1)
     }
     static var height: CGFloat {
-        CGFloat(rowCount) * cellSize + CGFloat(rowCount - 1) * spacing
+        CGFloat(rowCount) * cellSize + CGFloat(rowCount - 1) * rowSpacing
     }
     static var sectionHeight: CGFloat { topInset + height + bottomInset }
 
     static func cellFrame(column: Int, row: Int, containerWidth: CGFloat) -> CGRect {
         let originX = (containerWidth - width) / 2
-        let stride = cellSize + spacing
+        let columnStride = cellSize + columnSpacing
+        let rowStride = cellSize + rowSpacing
         return CGRect(
-            x: originX + CGFloat(column) * stride,
-            y: topInset + CGFloat(row) * stride,
+            x: originX + CGFloat(column) * columnStride,
+            y: topInset + CGFloat(row) * rowStride,
             width: cellSize,
             height: cellSize
         )
