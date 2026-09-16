@@ -44,9 +44,11 @@ struct HistoryView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(model.session.ledger.history) { day in
-                            Button { selectedDay = day.day } label: { HistoryDayRow(day: day) }
+                            Button { selectedDay = day.day } label: {
+                                HistoryDayRow(day: day, overviewToday: model.today)
+                            }
                                 .buttonStyle(PanelButtonStyle())
-                                .accessibilityLabel("\(day.day), Create \(ActivityFormatting.duration(day.createSeconds)), Consume \(ActivityFormatting.duration(day.consumeSeconds)), unclassified \(ActivityFormatting.duration(day.unclassifiedSeconds)), \(ratioDescription(day))")
+                                .accessibilityLabel("\(HistoryFormatting.overviewDateLabel(for: day.day, today: model.today)), Create \(ActivityFormatting.duration(day.createSeconds)), Consume \(ActivityFormatting.duration(day.consumeSeconds)), unclassified \(ActivityFormatting.duration(day.unclassifiedSeconds)), \(ratioDescription(day))")
                                 .accessibilityHint("Show source activity")
                         }
                     }
@@ -214,6 +216,7 @@ private struct DailyRatioTooltipLayout: Layout {
 private struct HistoryDayRow: View {
     let day: DaySummary
     var showsDirection = false
+    var overviewToday: String?
 
     var body: some View {
         Group {
@@ -230,7 +233,7 @@ private struct HistoryDayRow: View {
                 }
             } else {
                 HStack(spacing: 16) {
-                    Text(HistoryFormatting.dateLabel(for: day.day))
+                    Text(HistoryFormatting.overviewDateLabel(for: day.day, today: overviewToday))
                         .font(RatioTheme.font())
                         .foregroundStyle(RatioTheme.secondary)
                         .frame(width: 58, alignment: .leading)
@@ -291,6 +294,10 @@ private struct HistoryDayRow: View {
 }
 
 enum HistoryFormatting {
+    static func overviewDateLabel(for recordedDay: String, today: String?) -> String {
+        recordedDay == today ? "TODAY" : dateLabel(for: recordedDay)
+    }
+
     static func dateLabel(for recordedDay: String) -> String {
         RecordedDayFormatting.shortDateLabel(for: recordedDay)?.uppercased() ?? recordedDay
     }
