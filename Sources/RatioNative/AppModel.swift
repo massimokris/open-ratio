@@ -5,7 +5,7 @@ import RatioCore
 @MainActor
 final class AppModel: ObservableObject {
     enum Page: String, CaseIterable { case today = "Today", history = "History", preferences = "Preferences" }
-    enum ActivityFilter: String, CaseIterable { case all = "All activity", unclassified = "Unclassified" }
+    enum ActivityFilter: String, CaseIterable, Hashable { case all = "All activity", unclassified = "Unclassified" }
     enum Appearance: String, CaseIterable {
         case light = "Light", dark = "Dark"
         var colorScheme: ColorScheme { self == .dark ? .dark : .light }
@@ -16,6 +16,7 @@ final class AppModel: ObservableObject {
     @Published var now = Date()
     @Published private(set) var storageNotice: String?
     @Published private(set) var isReferenceDemo = false
+    @Published private(set) var activityDeletionState = ActivityDeletionState()
     let browserTracking = BrowserTrackingCoordinator()
     let launchAtLogin = LaunchAtLoginController(service: NativeLaunchAtLoginService())
     let dataDirectory: URL
@@ -30,6 +31,7 @@ final class AppModel: ObservableObject {
     private var lastSaveUptime: TimeInterval = 0
     private var persistenceBlocked = false
     private var recoveryNotice: String?
+    private var activityDeletionTimers: [UUID: Timer] = [:]
 
     init() {
         let override = ProcessInfo.processInfo.environment["RATIO_NATIVE_DATA_DIR"]
@@ -93,6 +95,9 @@ final class AppModel: ObservableObject {
     var activeCategory: ActivityCategory? { activeSource.flatMap { session.ledger.categories[$0.id] } }
     var unclassifiedCount: Int { summary.activities.filter { $0.category == nil }.count }
     var activityRows: [ActivityTotal] {
+        activityRows(for: filter)
+    }
+    private func activityRows(for filter: ActivityFilter) -> [ActivityTotal] {
         summary.activities.filter { filter == .all || $0.category == nil }.sorted {
             if isReferenceDemo {
                 return (ReferenceDemo.sourceOrder.firstIndex(of: $0.id) ?? Int.max)
@@ -101,6 +106,9 @@ final class AppModel: ObservableObject {
             if ($0.id == activeSource?.id) != ($1.id == activeSource?.id) { return $0.id == activeSource?.id }
             return $0.seconds == $1.seconds ? $0.source.name < $1.source.name : $0.seconds > $1.seconds
         }
+    }
+    var todayRows: [TodayActivityRow] {
+        activityDeletionState.rows(activities: activityRows, isDemo: session.isDemo, filter: filter)
     }
     var menuRatio: String {
         guard let percentage = summary.createPercentage else { return "—/—" }
@@ -146,6 +154,31 @@ final class AppModel: ObservableObject {
         session.classify(source, as: category)
         saveActivity()
     }
+    func deleteActivity(_ activity: ActivityTotal, at position: Int) {
+        refreshTracking()
+        var positions = [filter: position]
+        for candidate in ActivityFilter.allCases where candidate != filter {
+            if let candidatePosition = activityRows(for: candidate).firstIndex(where: { $0.id == activity.id }) {
+                positions[candidate] = candidatePosition
+            }
+        }
+        guard let deletion = session.deleteActivity(activity.source, on: today) else { return }
+        let pending = activityDeletionState.insert(
+            deletion,
+            isDemo: session.isDemo,
+            positions: positions,
+            atUptime: ProcessInfo.processInfo.systemUptime
+        )
+        scheduleActivityDeletionExpiration(pending)
+        saveActivity()
+    }
+    func undoDelete(_ id: UUID) {
+        guard let pending = activityDeletionState.take(id: id) else { return }
+        activityDeletionTimers.removeValue(forKey: id)?.invalidate()
+        refreshTracking()
+        session.undoDelete(pending.deletion)
+        saveActivity()
+    }
     func togglePause() {
         refreshTracking()
         session.setPaused(!session.isPaused)
@@ -155,6 +188,7 @@ final class AppModel: ObservableObject {
     func startDemo() {
         refreshTracking()
         saveActivity()
+        discardActivityDeletions(isDemo: true)
         if isReferenceDemo { session.exitDemo(); isReferenceDemo = false }
         session.enterDemo(day: today)
         browserTracking.foregroundChanged(nil)
@@ -164,6 +198,7 @@ final class AppModel: ObservableObject {
     private func startReferenceDemo() {
         refreshTracking()
         saveActivity()
+        discardActivityDeletions(isDemo: true)
         session.enterDemo(ledger: ReferenceDemo.ledger(day: today), activeSource: ReferenceDemo.activeSource)
         browserTracking.foregroundChanged(nil)
         isReferenceDemo = true
@@ -171,11 +206,13 @@ final class AppModel: ObservableObject {
         filter = .all
     }
     func resetDemo() {
+        discardActivityDeletions(isDemo: true)
         if isReferenceDemo { startDemo() }
         else { session.resetDemo(day: today) }
         filter = .all
     }
     func exitDemo() {
+        discardActivityDeletions(isDemo: true)
         session.exitDemo()
         isReferenceDemo = false
         refreshTracking()
@@ -184,6 +221,7 @@ final class AppModel: ObservableObject {
     func resetToday() {
         if session.isDemo { resetDemo(); return }
         refreshTracking()
+        discardActivityDeletions(isDemo: false)
         session.resetDay(today)
         refreshTracking()
         saveActivity()
@@ -191,4 +229,29 @@ final class AppModel: ObservableObject {
     }
     func undoResetToday() { refreshTracking(); session.undoReset(); saveActivity() }
     func selectDemoSource(_ source: ActivitySource) { session.selectDemoSource(source) }
+
+    private func scheduleActivityDeletionExpiration(_ deletion: PendingActivityDeletion) {
+        let timer = Timer(timeInterval: ActivityDeletionState.undoDuration, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.expireActivityDeletions(atUptime: deletion.expiresAtUptime)
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        activityDeletionTimers[deletion.id] = timer
+    }
+
+    private func expireActivityDeletions(atUptime uptime: TimeInterval) {
+        let previousIDs = Set(activityDeletionState.pending.map(\.id))
+        activityDeletionState.expire(atUptime: uptime)
+        let remainingIDs = Set(activityDeletionState.pending.map(\.id))
+        for id in previousIDs.subtracting(remainingIDs) {
+            activityDeletionTimers.removeValue(forKey: id)?.invalidate()
+        }
+    }
+
+    private func discardActivityDeletions(isDemo: Bool) {
+        for deletion in activityDeletionState.removeAll(isDemo: isDemo) {
+            activityDeletionTimers.removeValue(forKey: deletion.id)?.invalidate()
+        }
+    }
 }

@@ -1,5 +1,13 @@
 import Foundation
 
+/// The exact activity removed by one row deletion, including its original dataset and day.
+public struct ActivityDeletion: Equatable {
+    fileprivate enum Dataset { case live, demo }
+    public let day: String
+    public let activity: ActivityTotal
+    fileprivate let dataset: Dataset
+}
+
 /// Owns separate real and fictional datasets, including independent pause and foreground state.
 public struct RatioSession {
     public var liveLedger: ActivityLedger
@@ -15,6 +23,8 @@ public struct RatioSession {
     private var removedDay: DaySummary?
     private var demoSeed: ActivityLedger?
     private var demoSeedSource: ActivitySource?
+    private var suppressedLiveSourceID: String?
+    private var suppressedDemoSourceID: String?
 
     public init(liveLedger: ActivityLedger = ActivityLedger()) { self.liveLedger = liveLedger }
     public var ledger: ActivityLedger { isDemo ? demoLedger : liveLedger }
@@ -26,6 +36,10 @@ public struct RatioSession {
     /// The outgoing observation owns elapsed time; the current source starts at this instant.
     public mutating func observe(_ observation: ActivityObservation, calendar: Calendar = .current) {
         defer {
+            if let suppressedLiveSourceID, let source = observation.source,
+               source.id != suppressedLiveSourceID {
+                self.suppressedLiveSourceID = nil
+            }
             previousObservation = observation
             liveSource = observation.source
             isLiveIdle = observation.idleSeconds >= 300
@@ -86,6 +100,26 @@ public struct RatioSession {
         removedDay = nil
     }
 
+    public mutating func deleteActivity(_ source: ActivitySource, on day: String) -> ActivityDeletion? {
+        if isDemo {
+            guard let activity = demoLedger.removeActivity(for: source, on: day) else { return nil }
+            if demoSource?.id == source.id { suppressedDemoSourceID = source.id }
+            return ActivityDeletion(day: day, activity: activity, dataset: .demo)
+        }
+        guard let activity = liveLedger.removeActivity(for: source, on: day) else { return nil }
+        if liveSource?.id == source.id { suppressedLiveSourceID = source.id }
+        return ActivityDeletion(day: day, activity: activity, dataset: .live)
+    }
+
+    public mutating func undoDelete(_ deletion: ActivityDeletion) {
+        switch deletion.dataset {
+        case .live:
+            liveLedger.restoreActivity(deletion.activity, on: deletion.day)
+        case .demo:
+            demoLedger.restoreActivity(deletion.activity, on: deletion.day)
+        }
+    }
+
     public mutating func setSystemActive(_ active: Bool) {
         isSystemActive = active
         previousObservation = nil
@@ -93,12 +127,17 @@ public struct RatioSession {
     public mutating func recordLive(seconds: TimeInterval, source: ActivitySource, day: String) {
         guard !isDemo, !isLivePaused, isSystemActive else { return }
         liveSource = source
+        if let suppressedLiveSourceID {
+            guard source.id != suppressedLiveSourceID else { return }
+            self.suppressedLiveSourceID = nil
+        }
         liveLedger.record(seconds: seconds, source: source, day: day)
     }
     public mutating func enterDemo(day: String) {
         guard !isDemo else { return }
         previousObservation = nil
         isDemo = true
+        suppressedDemoSourceID = nil
         demoSeed = nil
         demoSeedSource = nil
         resetDemo(day: day)
@@ -107,6 +146,7 @@ public struct RatioSession {
     public mutating func enterDemo(ledger: ActivityLedger, activeSource: ActivitySource?) {
         previousObservation = nil
         isDemo = true
+        suppressedDemoSourceID = nil
         demoSeed = ledger
         demoSeedSource = activeSource
         demoLedger = ledger
@@ -115,19 +155,28 @@ public struct RatioSession {
     }
     public mutating func resetDemo(day: String) {
         guard isDemo else { return }
+        suppressedDemoSourceID = nil
         demoLedger = demoSeed ?? DemoData.ledger(day: day)
         demoSource = demoSeed == nil ? DemoData.sources.first : demoSeedSource
         isDemoPaused = false
     }
     public mutating func selectDemoSource(_ source: ActivitySource) {
         guard isDemo, availableDemoSources.contains(source) else { return }
+        if let suppressedDemoSourceID, source.id != suppressedDemoSourceID {
+            self.suppressedDemoSourceID = nil
+        }
         demoSource = source
     }
     public mutating func advanceDemo(seconds: TimeInterval, day: String) {
         guard isDemo, !isDemoPaused, let source = demoSource else { return }
+        guard source.id != suppressedDemoSourceID else { return }
         demoLedger.record(seconds: seconds, source: source, day: day)
     }
-    public mutating func exitDemo() { isDemo = false; previousObservation = nil }
+    public mutating func exitDemo() {
+        isDemo = false
+        previousObservation = nil
+        suppressedDemoSourceID = nil
+    }
 }
 
 public enum DemoData {

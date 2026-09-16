@@ -28,6 +28,30 @@ final class ActivityStoreTests: XCTestCase {
         XCTAssertNil(loaded.notice)
     }
 
+    func testDeletedActivityAndItsUndoPersistAcrossNewStores() throws {
+        let earlierDay = "2026-09-14"
+        let today = "2026-09-15"
+        let editor = ActivitySource(id: "app.editor", name: "Editor")
+        var session = RatioSession()
+        session.classify(editor, as: .create)
+        session.recordLive(seconds: 30, source: editor, day: earlierDay)
+        session.recordLive(seconds: 90, source: editor, day: today)
+        let deletion = try XCTUnwrap(session.deleteActivity(editor, on: today))
+        let store = ActivityStore(directory: directory)
+
+        try store.save(session.liveLedger)
+        let deleted = try ActivityStore(directory: directory).load().ledger
+        XCTAssertEqual(deleted.summary(on: today).totalSeconds, 0)
+        XCTAssertEqual(deleted.summary(on: earlierDay).totalSeconds, 30)
+        XCTAssertEqual(deleted.categories[editor.id], .create)
+
+        session.undoDelete(deletion)
+        try store.save(session.liveLedger)
+        let restored = try ActivityStore(directory: directory).load().ledger
+        XCTAssertEqual(restored.summary(on: today).totalSeconds, 90)
+        XCTAssertEqual(restored.categories[editor.id], .create)
+    }
+
     func testFirstLaunchStartsWithEmptyActivity() throws {
         let loaded = try ActivityStore(directory: directory).load()
 

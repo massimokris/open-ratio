@@ -5,9 +5,10 @@ import RatioCore
 struct TodayView: View {
     @EnvironmentObject private var model: AppModel
     var body: some View {
+        let rows = model.todayRows
         ScrollView(.vertical) {
             LazyVStack(spacing: 0) {
-                if model.activityRows.isEmpty {
+                if rows.isEmpty {
                     if model.filter == .unclassified {
                         Text("All caught up.")
                             .font(RatioTheme.font(size: 12))
@@ -24,18 +25,96 @@ struct TodayView: View {
                             .padding(16)
                     }
                 } else {
-                    ForEach(model.activityRows) { activity in
-                        let isForeground = activity.id == model.activeSource?.id
-                        ActivityRow(activity: activity,
-                                    isForeground: isForeground,
-                                    isTracking: isForeground && !model.indicatorPaused) {
-                            model.classify(activity.source, as: $0)
+                    ForEach(Array(rows.enumerated()), id: \.element.id) { position, row in
+                        switch row {
+                        case let .activity(activity):
+                            let isForeground = activity.id == model.activeSource?.id
+                            DeletableActivityRow(
+                                activity: activity,
+                                isForeground: isForeground,
+                                isTracking: isForeground && !model.indicatorPaused,
+                                classify: { model.classify(activity.source, as: $0) },
+                                delete: { model.deleteActivity(activity, at: position) }
+                            )
+                        case let .undo(deletion):
+                            UndoActivityDeletionRow(deletion: deletion) {
+                                model.undoDelete(deletion.id)
+                            }
                         }
                     }
                 }
             }
         }
         .frame(width: 360, height: 220)
+    }
+}
+
+private struct DeletableActivityRow: View {
+    let activity: ActivityTotal
+    let isForeground: Bool
+    let isTracking: Bool
+    let classify: (ActivityCategory?) -> Void
+    let delete: () -> Void
+    @State private var gesture = ActivityDeleteGestureState()
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            HStack(spacing: 0) {
+                Text("Delete")
+                    .font(RatioTheme.font())
+                    .foregroundStyle(Color.white)
+                    .padding(.leading, 16)
+                Spacer(minLength: 0)
+            }
+            .frame(width: 360, height: 44)
+            .background(RatioTheme.consume)
+            .accessibilityHidden(true)
+
+            ActivityRow(
+                activity: activity,
+                isForeground: isForeground,
+                isTracking: isTracking,
+                classify: classify
+            )
+            .offset(x: gesture.offset)
+        }
+        .frame(width: 360, height: 44)
+        .contentShape(Rectangle())
+        .clipped()
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 10, coordinateSpace: .local)
+                .onChanged { value in
+                    if gesture.update(translation: value.translation, rowWidth: 360) { delete() }
+                }
+                .onEnded { value in
+                    if gesture.update(translation: value.translation, rowWidth: 360) { delete() }
+                    withAnimation(.easeOut(duration: 0.15)) { gesture.finish() }
+                }
+        )
+    }
+}
+
+private struct UndoActivityDeletionRow: View {
+    let deletion: PendingActivityDeletion
+    let undo: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Button(action: undo) {
+                Image(systemName: "arrow.uturn.backward")
+                    .foregroundStyle(RatioTheme.text)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PanelButtonStyle())
+            .focusable(true)
+            .accessibilityLabel("Undo delete \(deletion.deletion.activity.source.name)")
+            Spacer(minLength: 0)
+        }
+        .frame(width: 360, height: 44)
+        .background(RatioTheme.background)
+        .overlay(alignment: .bottom) { Hairline() }
+        .accessibilityElement(children: .contain)
     }
 }
 

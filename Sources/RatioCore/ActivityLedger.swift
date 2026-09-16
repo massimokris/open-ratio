@@ -64,6 +64,20 @@ public struct ActivityLedger: Codable, Equatable {
         days[day, default: [:]][source.id, default: 0] += seconds
     }
 
+    /// Removes one source's recorded time from a day while retaining its identity and category.
+    @discardableResult
+    public mutating func removeActivity(for source: ActivitySource, on day: String) -> ActivityTotal? {
+        guard let recordedSource = sources[source.id],
+              let seconds = days[day]?.removeValue(forKey: source.id) else { return nil }
+        if days[day]?.isEmpty == true { days.removeValue(forKey: day) }
+        return ActivityTotal(source: recordedSource, seconds: seconds, category: categories[source.id])
+    }
+
+    /// Adds removed time back without replacing newer source metadata or category choices.
+    public mutating func restoreActivity(_ activity: ActivityTotal, on day: String) {
+        record(seconds: activity.seconds, source: sources[activity.id] ?? activity.source, day: day)
+    }
+
     /// Clears one recorded day while retaining remembered categories and earlier days.
     @discardableResult
     public mutating func removeActivity(on day: String) -> DaySummary {

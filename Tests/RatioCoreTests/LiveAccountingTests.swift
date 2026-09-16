@@ -129,4 +129,43 @@ final class LiveAccountingTests: XCTestCase {
         XCTAssertEqual(session.ledger.summary(on: "2026-09-15").totalSeconds, 25)
     }
 
+    func testDeletingActiveSourceSuppressesItUntilAnotherSourceBecomesActive() throws {
+        let today = "2026-09-15"
+        var session = RatioSession()
+        session.classify(editor, as: .create)
+        session.observe(observation(0, source: editor), calendar: utc)
+        session.observe(observation(4, source: editor), calendar: utc)
+
+        let deletion = try XCTUnwrap(session.deleteActivity(editor, on: today))
+        session.observe(observation(6, source: editor), calendar: utc)
+        session.observe(observation(8, source: browser), calendar: utc)
+        session.observe(observation(11, source: browser), calendar: utc)
+        session.observe(observation(13, source: editor), calendar: utc)
+        session.observe(observation(17, source: editor), calendar: utc)
+
+        XCTAssertEqual(deletion.activity.seconds, 4)
+        XCTAssertEqual(session.ledger.summary(on: today).activities.first { $0.id == browser.id }?.seconds, 5)
+        XCTAssertEqual(session.ledger.summary(on: today).activities.first { $0.id == editor.id }?.seconds, 4)
+        XCTAssertEqual(session.ledger.categories[editor.id], .create)
+    }
+
+    func testUndoWhileDeletedSourceRemainsActiveDoesNotCreditSuppressedTime() throws {
+        let today = "2026-09-15"
+        var session = RatioSession()
+        session.observe(observation(0, source: editor), calendar: utc)
+        session.observe(observation(4, source: editor), calendar: utc)
+        let deletion = try XCTUnwrap(session.deleteActivity(editor, on: today))
+        session.observe(observation(6, source: editor), calendar: utc)
+
+        session.undoDelete(deletion)
+        session.observe(observation(8, source: editor), calendar: utc)
+        XCTAssertEqual(session.ledger.summary(on: today).totalSeconds, 4)
+
+        session.observe(observation(10, source: browser), calendar: utc)
+        session.observe(observation(12, source: editor), calendar: utc)
+        session.observe(observation(14, source: editor), calendar: utc)
+        XCTAssertEqual(session.ledger.summary(on: today).activities.first { $0.id == editor.id }?.seconds, 6)
+        XCTAssertEqual(session.ledger.summary(on: today).activities.first { $0.id == browser.id }?.seconds, 2)
+    }
+
 }

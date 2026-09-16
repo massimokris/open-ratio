@@ -70,4 +70,68 @@ final class RatioSessionTests: XCTestCase {
         XCTAssertNil(session.ledger.categories[other.id])
         XCTAssertEqual(session.activeSource, first)
     }
+
+    func testDeletingActiveDemoSourceSuppressesItUntilSwitchWithoutChangingLiveActivity() throws {
+        let day = "2026-09-15"
+        let realSource = ActivitySource(id: "app.real", name: "Real work")
+        let demoEditor = ActivitySource(id: "demo.editor", name: "Demo Editor")
+        let demoBrowser = ActivitySource(id: "demo.browser", name: "demo.test", kind: .website)
+        var demoLedger = ActivityLedger()
+        demoLedger.record(seconds: 100, source: demoEditor, day: day)
+        demoLedger.record(seconds: 50, source: demoBrowser, day: day)
+        var session = RatioSession()
+        session.recordLive(seconds: 60, source: realSource, day: day)
+        let liveBeforeDemo = session.liveLedger
+        session.enterDemo(ledger: demoLedger, activeSource: demoEditor)
+
+        let deletion = try XCTUnwrap(session.deleteActivity(demoEditor, on: day))
+        session.advanceDemo(seconds: 5, day: day)
+        session.selectDemoSource(demoBrowser)
+        session.advanceDemo(seconds: 3, day: day)
+        session.selectDemoSource(demoEditor)
+        session.advanceDemo(seconds: 2, day: day)
+
+        XCTAssertEqual(deletion.activity.seconds, 100)
+        XCTAssertEqual(session.ledger.summary(on: day).activities.first { $0.id == demoBrowser.id }?.seconds, 53)
+        XCTAssertEqual(session.ledger.summary(on: day).activities.first { $0.id == demoEditor.id }?.seconds, 2)
+        XCTAssertEqual(session.liveLedger, liveBeforeDemo)
+    }
+
+    func testUndoDeleteAddsOnlyRemovedTimeAndKeepsCurrentCategory() throws {
+        let day = "2026-09-15"
+        let editor = ActivitySource(id: "app.editor", name: "Editor")
+        let browser = ActivitySource(id: "app.browser", name: "Browser")
+        var session = RatioSession()
+        session.classify(editor, as: .create)
+        session.recordLive(seconds: 100, source: editor, day: day)
+        let deletion = try XCTUnwrap(session.deleteActivity(editor, on: day))
+
+        session.classify(editor, as: .consume)
+        session.recordLive(seconds: 10, source: browser, day: day)
+        session.recordLive(seconds: 3, source: editor, day: day)
+        session.undoDelete(deletion)
+
+        let restored = try XCTUnwrap(session.ledger.summary(on: day).activities.first { $0.id == editor.id })
+        XCTAssertEqual(restored.seconds, 103)
+        XCTAssertEqual(restored.category, .consume)
+        XCTAssertEqual(session.ledger.summary(on: day).totalSeconds, 113)
+    }
+
+    func testDemoDeletionUndoCannotRestoreActivityIntoLiveDataset() throws {
+        let day = "2026-09-15"
+        let realSource = ActivitySource(id: "app.real", name: "Real work")
+        let demoSource = ActivitySource(id: "demo.editor", name: "Demo Editor")
+        var demoLedger = ActivityLedger()
+        demoLedger.record(seconds: 100, source: demoSource, day: day)
+        var session = RatioSession()
+        session.recordLive(seconds: 60, source: realSource, day: day)
+        session.enterDemo(ledger: demoLedger, activeSource: demoSource)
+        let deletion = try XCTUnwrap(session.deleteActivity(demoSource, on: day))
+
+        session.exitDemo()
+        session.undoDelete(deletion)
+
+        XCTAssertEqual(session.ledger.summary(on: day).totalSeconds, 60)
+        XCTAssertEqual(session.demoLedger.summary(on: day).totalSeconds, 100)
+    }
 }
