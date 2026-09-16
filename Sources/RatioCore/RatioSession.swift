@@ -1,11 +1,15 @@
 import Foundation
 
+public enum ActivityDataset: Equatable {
+    case live
+    case demo
+}
+
 /// The exact activity removed by one row deletion, including its original dataset and day.
 public struct ActivityDeletion: Equatable {
-    fileprivate enum Dataset { case live, demo }
     public let day: String
     public let activity: ActivityTotal
-    fileprivate let dataset: Dataset
+    public let dataset: ActivityDataset
 }
 
 /// Owns separate real and fictional datasets, including independent pause and foreground state.
@@ -28,8 +32,14 @@ public struct RatioSession {
 
     public init(liveLedger: ActivityLedger = ActivityLedger()) { self.liveLedger = liveLedger }
     public var ledger: ActivityLedger { isDemo ? demoLedger : liveLedger }
+    public var currentDataset: ActivityDataset { isDemo ? .demo : .live }
     public var isPaused: Bool { isDemo ? isDemoPaused : isLivePaused }
     public var activeSource: ActivitySource? { isDemo ? demoSource : liveSource }
+    public var isActiveSourceSuppressed: Bool {
+        let suppressedSourceID = isDemo ? suppressedDemoSourceID : suppressedLiveSourceID
+        guard let suppressedSourceID, let activeSource else { return false }
+        return activeSource.id == suppressedSourceID
+    }
     public var canUndoReset: Bool { !isDemo && removedDay != nil }
     public var availableDemoSources: [ActivitySource] { demoSeed.map { $0.sources.values.sorted { $0.name < $1.name } } ?? DemoData.sources }
 

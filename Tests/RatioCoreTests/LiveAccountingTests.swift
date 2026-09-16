@@ -155,13 +155,16 @@ final class LiveAccountingTests: XCTestCase {
         session.observe(observation(0, source: editor), calendar: utc)
         session.observe(observation(4, source: editor), calendar: utc)
         let deletion = try XCTUnwrap(session.deleteActivity(editor, on: today))
+        XCTAssertTrue(session.isActiveSourceSuppressed)
         session.observe(observation(6, source: editor), calendar: utc)
 
         session.undoDelete(deletion)
+        XCTAssertTrue(session.isActiveSourceSuppressed)
         session.observe(observation(8, source: editor), calendar: utc)
         XCTAssertEqual(session.ledger.summary(on: today).totalSeconds, 4)
 
         session.observe(observation(10, source: browser), calendar: utc)
+        XCTAssertFalse(session.isActiveSourceSuppressed)
         session.observe(observation(12, source: editor), calendar: utc)
         session.observe(observation(14, source: editor), calendar: utc)
         XCTAssertEqual(session.ledger.summary(on: today).activities.first { $0.id == editor.id }?.seconds, 6)

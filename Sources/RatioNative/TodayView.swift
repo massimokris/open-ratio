@@ -32,13 +32,13 @@ struct TodayView: View {
                             DeletableActivityRow(
                                 activity: activity,
                                 isForeground: isForeground,
-                                isTracking: isForeground && !model.indicatorPaused,
+                                isTracking: isForeground && model.isActiveSourceTracking,
                                 classify: { model.classify(activity.source, as: $0) },
                                 delete: { model.deleteActivity(activity, at: position) }
                             )
-                        case let .undo(deletion):
-                            UndoActivityDeletionRow(deletion: deletion) {
-                                model.undoDelete(deletion.id)
+                        case let .undo(pendingDeletion):
+                            UndoActivityDeletionRow(pendingDeletion: pendingDeletion) {
+                                model.undoDelete(pendingDeletion.id)
                             }
                         }
                     }
@@ -74,7 +74,7 @@ private struct DeletableActivityRow: View {
                 activity: activity,
                 isForeground: isForeground,
                 isTracking: isTracking,
-                classify: classify
+                classify: guardedClassification
             )
             .offset(x: gesture.offset)
         }
@@ -89,13 +89,24 @@ private struct DeletableActivityRow: View {
                 .onEnded { value in
                     if gesture.update(translation: value.translation, rowWidth: 360) { delete() }
                     withAnimation(.easeOut(duration: 0.15)) { gesture.finish() }
+                    // Button actions for the same mouse-up are delivered before the
+                    // next run-loop turn, so keep classification disabled until then.
+                    DispatchQueue.main.async { gesture.resumeControlActivation() }
                 }
         )
+    }
+
+    private var guardedClassification: ((ActivityCategory?) -> Void)? {
+        guard !gesture.suppressesControlActivation else { return nil }
+        return { category in
+            guard !gesture.suppressesControlActivation else { return }
+            classify(category)
+        }
     }
 }
 
 private struct UndoActivityDeletionRow: View {
-    let deletion: PendingActivityDeletion
+    let pendingDeletion: PendingActivityDeletion
     let undo: () -> Void
 
     var body: some View {
@@ -108,7 +119,7 @@ private struct UndoActivityDeletionRow: View {
             }
             .buttonStyle(PanelButtonStyle())
             .focusable(true)
-            .accessibilityLabel("Undo delete \(deletion.deletion.activity.source.name)")
+            .accessibilityLabel("Undo delete \(pendingDeletion.sourceName)")
             Spacer(minLength: 0)
         }
         .frame(width: 360, height: 44)

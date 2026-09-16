@@ -80,13 +80,16 @@ final class RatioSessionTests: XCTestCase {
         demoLedger.record(seconds: 100, source: demoEditor, day: day)
         demoLedger.record(seconds: 50, source: demoBrowser, day: day)
         var session = RatioSession()
+        XCTAssertFalse(session.isActiveSourceSuppressed)
         session.recordLive(seconds: 60, source: realSource, day: day)
         let liveBeforeDemo = session.liveLedger
         session.enterDemo(ledger: demoLedger, activeSource: demoEditor)
 
         let deletion = try XCTUnwrap(session.deleteActivity(demoEditor, on: day))
+        XCTAssertTrue(session.isActiveSourceSuppressed)
         session.advanceDemo(seconds: 5, day: day)
         session.selectDemoSource(demoBrowser)
+        XCTAssertFalse(session.isActiveSourceSuppressed)
         session.advanceDemo(seconds: 3, day: day)
         session.selectDemoSource(demoEditor)
         session.advanceDemo(seconds: 2, day: day)
@@ -133,5 +136,32 @@ final class RatioSessionTests: XCTestCase {
 
         XCTAssertEqual(session.ledger.summary(on: day).totalSeconds, 60)
         XCTAssertEqual(session.demoLedger.summary(on: day).totalSeconds, 100)
+    }
+
+    func testUndoRestoresClassifiedWebsiteAndUnclassifiedTotals() throws {
+        let day = "2026-09-15"
+        let editor = ActivitySource(id: "app.editor", name: "Editor")
+        let video = ActivitySource(id: "web.video.test", name: "video.test", kind: .website)
+        let chat = ActivitySource(id: "app.chat", name: "Chat")
+        var session = RatioSession()
+        session.classify(editor, as: .create)
+        session.classify(video, as: .consume)
+        session.recordLive(seconds: 60, source: editor, day: day)
+        session.recordLive(seconds: 30, source: video, day: day)
+        session.recordLive(seconds: 10, source: chat, day: day)
+
+        let websiteDeletion = try XCTUnwrap(session.deleteActivity(video, on: day))
+        XCTAssertEqual(session.ledger.summary(on: day).createPercentage, 100)
+        session.undoDelete(websiteDeletion)
+        XCTAssertEqual(session.ledger.summary(on: day).createPercentage ?? -1, 66.6666667, accuracy: 0.00001)
+        XCTAssertEqual(session.ledger.summary(on: day).unclassifiedSeconds, 10)
+
+        let unclassifiedDeletion = try XCTUnwrap(session.deleteActivity(chat, on: day))
+        XCTAssertEqual(session.ledger.summary(on: day).unclassifiedSeconds, 0)
+        XCTAssertEqual(session.ledger.summary(on: day).activities.filter { $0.category == nil }.count, 0)
+        session.undoDelete(unclassifiedDeletion)
+        XCTAssertEqual(session.ledger.summary(on: day).totalSeconds, 100)
+        XCTAssertEqual(session.ledger.summary(on: day).unclassifiedSeconds, 10)
+        XCTAssertEqual(session.ledger.summary(on: day).activities.filter { $0.category == nil }.count, 1)
     }
 }
