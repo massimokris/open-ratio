@@ -5,18 +5,40 @@ import RatioCore
 struct HistoryView: View {
     @EnvironmentObject private var model: AppModel
     @Binding var selectedDay: String?
+    @State private var hoveredDayIdentifier: String?
 
     var body: some View {
-        VStack(spacing: 0) {
+        Group {
             if let selectedDay {
                 dayDetail(model.session.ledger.summary(on: selectedDay))
-            } else if model.session.ledger.history.isEmpty {
+            } else {
+                historyOverview
+            }
+        }
+        .font(RatioTheme.font())
+        .frame(width: 360, height: 220)
+        .background(RatioTheme.background)
+        .onChange(of: selectedDay) { _ in hoveredDayIdentifier = nil }
+        .onChange(of: model.today) { _ in hoveredDayIdentifier = nil }
+        .onDisappear { hoveredDayIdentifier = nil }
+        .contextMenu {
+            Button("Export \(model.exportDatasetName) CSV…", action: model.exportActivityCSV)
+        }
+    }
+
+    private var historyOverview: some View {
+        let grid = DailyRatioGrid(ledger: model.session.ledger, today: model.today)
+        return VStack(spacing: 0) {
+            DailyRatioCalendarView(grid: grid, hoveredDayIdentifier: $hoveredDayIdentifier)
+                .frame(width: 360, height: DailyRatioGridMetrics.sectionHeight)
+            if model.session.ledger.history.isEmpty {
                 VStack(alignment: .leading, spacing: 9) {
                     Text("NO RECORDED DAYS").foregroundStyle(RatioTheme.text)
                     Text("Your daily balance will appear here as you use your Mac.")
                         .foregroundStyle(RatioTheme.secondary).fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(16).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -30,12 +52,25 @@ struct HistoryView: View {
                 }
             }
         }
-        .font(RatioTheme.font())
         .frame(width: 360, height: 220)
-        .background(RatioTheme.background)
-        .contextMenu {
-            Button("Export \(model.exportDatasetName) CSV…", action: model.exportActivityCSV)
+        .overlay {
+            if let hovered = hoveredDay(in: grid) {
+                DailyRatioTooltipLayout(cellFrame: hovered.frame) {
+                    DailyRatioTooltip(text: hovered.day.tooltip)
+                }
+                .allowsHitTesting(false)
+            }
         }
+    }
+
+    private func hoveredDay(in grid: DailyRatioGrid) -> (day: DailyRatioDay, frame: CGRect)? {
+        guard let hoveredDayIdentifier else { return nil }
+        for (column, week) in grid.weeks.enumerated() {
+            guard let row = week.slots.firstIndex(where: { $0.dayIdentifier == hoveredDayIdentifier }),
+                  let day = week.slots[row].day else { continue }
+            return (day, DailyRatioGridMetrics.cellFrame(column: column, row: row, containerWidth: 360))
+        }
+        return nil
     }
 
     private func dayDetail(_ day: DaySummary) -> some View {
@@ -58,6 +93,120 @@ struct HistoryView: View {
 
     private func ratioDescription(_ day: DaySummary) -> String {
         day.createPercentage.map { String(format: "%.2f percent Create", $0) } ?? "No classified time"
+    }
+}
+
+private struct DailyRatioCalendarView: View {
+    let grid: DailyRatioGrid
+    @Binding var hoveredDayIdentifier: String?
+
+    var body: some View {
+        HStack(spacing: DailyRatioGridMetrics.spacing) {
+            ForEach(grid.weeks) { week in
+                VStack(spacing: DailyRatioGridMetrics.spacing) {
+                    ForEach(week.slots) { slot in
+                        if let day = slot.day {
+                            DailyRatioSquare(day: day)
+                                .onHover { isHovered in
+                                    if isHovered {
+                                        hoveredDayIdentifier = day.dayIdentifier
+                                    } else if hoveredDayIdentifier == day.dayIdentifier {
+                                        hoveredDayIdentifier = nil
+                                    }
+                                }
+                        } else {
+                            Color.clear
+                                .frame(
+                                    width: DailyRatioGridMetrics.cellSize,
+                                    height: DailyRatioGridMetrics.cellSize
+                                )
+                                .accessibilityHidden(true)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(width: DailyRatioGridMetrics.width, height: DailyRatioGridMetrics.height)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Daily Create and Consume ratios")
+    }
+}
+
+private struct DailyRatioSquare: View {
+    let day: DailyRatioDay
+
+    var body: some View {
+        Group {
+            switch day.presentation {
+            case .noRatio:
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(RatioTheme.panel)
+            case .tie:
+                HStack(spacing: 0) {
+                    Rectangle().fill(RatioTheme.create.opacity(day.opacity))
+                    Rectangle().fill(RatioTheme.consume.opacity(day.opacity))
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
+            case let .dominant(category, _):
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(RatioTheme.category(category).opacity(day.opacity))
+            }
+        }
+        .frame(width: DailyRatioGridMetrics.cellSize, height: DailyRatioGridMetrics.cellSize)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(day.tooltip)
+    }
+}
+
+private struct DailyRatioTooltip: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(RatioTheme.font(size: 10))
+            .foregroundStyle(RatioTheme.text)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(RatioTheme.panel, in: RoundedRectangle(cornerRadius: 2, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .stroke(RatioTheme.line, lineWidth: 0.5)
+            }
+    }
+}
+
+private struct DailyRatioTooltipLayout: Layout {
+    let cellFrame: CGRect
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        CGSize(width: proposal.width ?? 360, height: proposal.height ?? 220)
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        guard let tooltip = subviews.first else { return }
+        let tooltipSize = tooltip.sizeThatFits(.unspecified)
+        let localCenter = DailyRatioTooltipPlacement.center(
+            for: cellFrame,
+            tooltipSize: tooltipSize,
+            within: CGRect(origin: .zero, size: bounds.size)
+        )
+        tooltip.place(
+            at: CGPoint(x: bounds.minX + localCenter.x, y: bounds.minY + localCenter.y),
+            anchor: .center,
+            proposal: ProposedViewSize(width: tooltipSize.width, height: tooltipSize.height)
+        )
     }
 }
 
