@@ -190,32 +190,90 @@ public struct RatioSession {
 }
 
 public enum DemoData {
+    private enum PriorDayAllocation {
+        case categoryShare(ActivityCategory, weight: Double)
+        case unclassified(minutes: Double)
+
+        var category: ActivityCategory? {
+            switch self {
+            case let .categoryShare(category, _): return category
+            case .unclassified: return nil
+            }
+        }
+
+        func minutes(create: Double, consume: Double) -> Double {
+            switch self {
+            case let .categoryShare(.create, weight): return create * weight
+            case let .categoryShare(.consume, weight): return consume * weight
+            case let .unclassified(minutes): return minutes
+            }
+        }
+    }
+
+    private struct SourceFixture {
+        let source: ActivitySource
+        let todayMinutes: Double
+        let priorDayAllocation: PriorDayAllocation
+    }
+
     /// Twenty-nine prior days span both categories and the grid's full intensity range.
     private static let priorDayCreatePercentages: [Double] = [
         70, 30, 80, 20, 60, 40, 90, 10, 50, 75,
         25, 65, 35, 85, 15, 55, 45, 95, 5, 100,
         0, 72, 28, 82, 18, 62, 38, 52, 48
     ]
-    private static let createSourceWeights: [Double] = [0.52, 0.33, 0.15]
-    private static let consumeSourceWeights: [Double] = [0.58, 0.27, 0.15]
 
-    public static let sources: [ActivitySource] = [
-        ActivitySource(id: "demo.figma", name: "Figma"),
-        ActivitySource(id: "demo.code", name: "Visual Studio Code"),
-        ActivitySource(id: "demo.notes", name: "Notes"),
-        ActivitySource(id: "demo.youtube", name: "youtube.com", kind: .website),
-        ActivitySource(id: "demo.spotify", name: "Spotify"),
-        ActivitySource(id: "demo.x", name: "x.com", kind: .website),
-        ActivitySource(id: "demo.slack", name: "Slack"),
-        ActivitySource(id: "demo.finder", name: "Finder")
+    private static let sourceFixtures: [SourceFixture] = [
+        SourceFixture(
+            source: ActivitySource(id: "demo.figma", name: "Figma"),
+            todayMinutes: 68,
+            priorDayAllocation: .categoryShare(.create, weight: 0.52)
+        ),
+        SourceFixture(
+            source: ActivitySource(id: "demo.code", name: "Visual Studio Code"),
+            todayMinutes: 49,
+            priorDayAllocation: .categoryShare(.create, weight: 0.33)
+        ),
+        SourceFixture(
+            source: ActivitySource(id: "demo.notes", name: "Notes"),
+            todayMinutes: 13,
+            priorDayAllocation: .categoryShare(.create, weight: 0.15)
+        ),
+        SourceFixture(
+            source: ActivitySource(id: "demo.youtube", name: "youtube.com", kind: .website),
+            todayMinutes: 46,
+            priorDayAllocation: .categoryShare(.consume, weight: 0.58)
+        ),
+        SourceFixture(
+            source: ActivitySource(id: "demo.spotify", name: "Spotify"),
+            todayMinutes: 16,
+            priorDayAllocation: .categoryShare(.consume, weight: 0.27)
+        ),
+        SourceFixture(
+            source: ActivitySource(id: "demo.x", name: "x.com", kind: .website),
+            todayMinutes: 12,
+            priorDayAllocation: .categoryShare(.consume, weight: 0.15)
+        ),
+        SourceFixture(
+            source: ActivitySource(id: "demo.slack", name: "Slack"),
+            todayMinutes: 14,
+            priorDayAllocation: .unclassified(minutes: 8)
+        ),
+        SourceFixture(
+            source: ActivitySource(id: "demo.finder", name: "Finder"),
+            todayMinutes: 8,
+            priorDayAllocation: .unclassified(minutes: 4)
+        )
     ]
+    public static let sources = sourceFixtures.map(\.source)
+
     public static func ledger(day: String) -> ActivityLedger {
         var ledger = ActivityLedger()
-        let minutes: [Double] = [68, 49, 13, 46, 16, 12, 14, 8]
-        for (index, source) in sources.enumerated() {
-            ledger.record(seconds: minutes[index] * 60, source: source, day: day)
-            if index < 3 { ledger.classify(source, as: .create) }
-            else if index < 6 { ledger.classify(source, as: .consume) }
+        for fixture in sourceFixtures {
+            ledger.record(seconds: fixture.todayMinutes * 60, source: fixture.source, day: day)
+            if let category = fixture.priorDayAllocation.category {
+                ledger.classify(fixture.source, as: category)
+            }
         }
         // Fictional prior days make history and the ratio grid explorable without
         // manufacturing live activity.
@@ -230,45 +288,16 @@ public enum DemoData {
                 let classifiedMinutes = 120 + Double((offset % 5) * 15)
                 let createMinutes = classifiedMinutes * createPercentage / 100
                 let consumeMinutes = classifiedMinutes - createMinutes
-                record(
-                    totalMinutes: createMinutes,
-                    weights: createSourceWeights,
-                    sources: sources[0..<3],
-                    day: previousDay,
-                    in: &ledger
-                )
-                record(
-                    totalMinutes: consumeMinutes,
-                    weights: consumeSourceWeights,
-                    sources: sources[3..<6],
-                    day: previousDay,
-                    in: &ledger
-                )
-                ledger.record(
-                    seconds: Double(8 + offset % 4) * 60,
-                    source: sources[6],
-                    day: previousDay
-                )
-                ledger.record(
-                    seconds: Double(4 + offset % 3) * 60,
-                    source: sources[7],
-                    day: previousDay
-                )
+                for fixture in sourceFixtures {
+                    let minutes = fixture.priorDayAllocation.minutes(
+                        create: createMinutes,
+                        consume: consumeMinutes
+                    )
+                    ledger.record(seconds: minutes * 60, source: fixture.source, day: previousDay)
+                }
             }
         }
         return ledger
-    }
-
-    private static func record(
-        totalMinutes: Double,
-        weights: [Double],
-        sources: ArraySlice<ActivitySource>,
-        day: String,
-        in ledger: inout ActivityLedger
-    ) {
-        for (source, weight) in zip(sources, weights) {
-            ledger.record(seconds: totalMinutes * weight * 60, source: source, day: day)
-        }
     }
 }
 
