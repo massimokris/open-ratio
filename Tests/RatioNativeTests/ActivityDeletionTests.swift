@@ -3,22 +3,22 @@ import XCTest
 @testable import RatioNative
 
 final class ActivityDeletionTests: XCTestCase {
-    func testDragCommitsAtEightyPercentExactlyOnceAndSnapsBackBelowIt() {
+    func testDragCommitsAtSixtyPercentExactlyOnceAndSnapsBackBelowIt() {
         var belowThreshold = ActivityDeleteGestureState()
-        XCTAssertFalse(belowThreshold.update(translation: CGSize(width: 287.9, height: 0), rowWidth: 360))
-        XCTAssertEqual(belowThreshold.offset, 287.9, accuracy: 0.001)
+        XCTAssertFalse(belowThreshold.update(translation: CGSize(width: 215.9, height: 0), rowWidth: 360))
+        XCTAssertEqual(belowThreshold.offset, 215.9, accuracy: 0.001)
         belowThreshold.finish()
         XCTAssertEqual(belowThreshold.offset, 0)
 
         var atThreshold = ActivityDeleteGestureState()
-        XCTAssertTrue(atThreshold.update(translation: CGSize(width: 288, height: 0), rowWidth: 360))
+        XCTAssertTrue(atThreshold.update(translation: CGSize(width: 216, height: 0), rowWidth: 360))
         XCTAssertFalse(atThreshold.update(translation: CGSize(width: 340, height: 0), rowWidth: 360))
-        XCTAssertEqual(atThreshold.offset, 288)
+        XCTAssertEqual(atThreshold.offset, 216)
     }
 
     func testCommittedDragResetsBeforeUndoRestoresTheRow() {
         var gesture = ActivityDeleteGestureState()
-        XCTAssertTrue(gesture.update(translation: CGSize(width: 288, height: 0), rowWidth: 360))
+        XCTAssertTrue(gesture.update(translation: CGSize(width: 216, height: 0), rowWidth: 360))
 
         // The committed gesture must be neutral before undo can restore an
         // activity row whose SwiftUI state may have been preserved.

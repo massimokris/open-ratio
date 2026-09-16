@@ -2,6 +2,7 @@ import Foundation
 import RatioCore
 
 struct ActivityDeleteGestureState {
+    private static let commitThresholdRatio: CGFloat = 0.6
     private enum Direction { case undecided, horizontal, ignored }
 
     private(set) var offset: CGFloat = 0
@@ -21,7 +22,7 @@ struct ActivityDeleteGestureState {
         }
         guard direction == .horizontal else { return false }
         offset = min(max(0, translation.width), rowWidth)
-        guard offset >= rowWidth * 0.8 else { return false }
+        guard offset >= rowWidth * Self.commitThresholdRatio else { return false }
         didCommit = true
         return true
     }

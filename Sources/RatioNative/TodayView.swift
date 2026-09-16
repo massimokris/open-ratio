@@ -111,6 +111,7 @@ private struct UndoActivityDeletionRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
+            Spacer(minLength: 0)
             Button(action: undo) {
                 Image(systemName: "arrow.uturn.backward")
                     .foregroundStyle(RatioTheme.text)
@@ -120,7 +121,6 @@ private struct UndoActivityDeletionRow: View {
             .buttonStyle(PanelButtonStyle())
             .focusable(true)
             .accessibilityLabel("Undo delete \(pendingDeletion.sourceName)")
-            Spacer(minLength: 0)
         }
         .frame(width: 360, height: 44)
         .background(RatioTheme.background)
