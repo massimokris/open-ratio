@@ -31,6 +31,7 @@ struct HistoryView: View {
         return VStack(spacing: 0) {
             DailyRatioCalendarView(grid: grid, hoveredDayIdentifier: $hoveredDayIdentifier)
                 .frame(width: 360, height: DailyRatioGridMetrics.sectionHeight)
+                .overlay(alignment: .bottom) { Hairline() }
             if model.session.ledger.history.isEmpty {
                 VStack(alignment: .leading, spacing: 9) {
                     Text("NO RECORDED DAYS").foregroundStyle(RatioTheme.text)
